@@ -1,0 +1,29 @@
+name: MacOS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: "${{matrix.os}}:${{matrix.platform}}-${{matrix.build}}"
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [macos-latest]
+        build: [Debug, Release]
+
+    steps:
+    - name: Checkout repository and submodules
+      uses: actions/checkout@v1
+      with:
+          submodules: recursive
+
+    - name: Configure CMake
+      shell: bash
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{matrix.build}}
+
+    - name: Build
+      shell: bash
+      run: cmake --build build

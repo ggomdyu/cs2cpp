@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+    <Type Name="tg::Encoding">
+        <DisplayString>{_encodingName}</DisplayString>
+        <Expand>
+            <Item Name="CodePage">_converter->sharedData->staticData->codepage</Item>
+            <Item Name="IsSingleByte">_converter->sharedData->staticData->minBytesPerChar == 1 &amp;&amp; _converter->sharedData->staticData->maxBytesPerChar == 1</Item>
+            <Item Name="Preamble">_preamble</Item>
+            <Item Name="EncodingName">_encodingName</Item>
+        </Expand>
+    </Type>
+    <Type Name="tg::FileStream">
+        <DisplayString>{_encodingName}</DisplayString>
+        <Expand>
+            <Item Name="CanRead">_nativeFileHandle != (long long)-1 &amp;&amp; ((int)_access &amp; 1) != 0</Item>
+            <Item Name="Name">_filename</Item>
+            <Item Name="Position">_filePos + _writePos</Item>
+        </Expand>
+    </Type>
+    <Type Name="tg::String">
+        <DisplayString Condition="_str.fUnion.fFields.fLengthAndFlags&amp;2"> {
+            _str.fUnion.fStackFields.fBuffer,
+            [_str.fUnion.fFields.fLengthAndFlags&gt;=0 ? 
+            _str.fUnion.fFields.fLengthAndFlags&gt;&gt;5 : 
+            _str.fUnion.fFields.fLength]su
+            }
+        </DisplayString>
+        <DisplayString Condition="!(_str.fUnion.fFields.fLengthAndFlags&amp;2)"> {
+            _str.fUnion.fFields.fArray,
+            [_str.fUnion.fFields.fLengthAndFlags&gt;=0 ? 
+            _str.fUnion.fFields.fLengthAndFlags&gt;&gt;5 : 
+            _str.fUnion.fFields.fLength]su
+            }
+        </DisplayString>
+        <StringView Condition="_str.fUnion.fFields.fLengthAndFlags&amp;2">
+            _str.fUnion.fStackFields.fBuffer,
+            [_str.fUnion.fFields.fLengthAndFlags&gt;=0 ?
+            _str.fUnion.fFields.fLengthAndFlags&gt;&gt;5 :
+            _str.fUnion.fFields.fLength]su
+        </StringView>
+        <StringView Condition="!(_str.fUnion.fFields.fLengthAndFlags&amp;2)">
+            _str.fUnion.fFields.fArray,
+            [_str.fUnion.fFields.fLengthAndFlags&gt;=0 ?
+            _str.fUnion.fFields.fLengthAndFlags&gt;&gt;5 :
+            _str.fUnion.fFields.fLength]su
+        </StringView>
+        <Expand>
+            <Item Condition="_str.fUnion.fFields.fLengthAndFlags&gt;=0" Name="Length">_str.fUnion.fFields.fLengthAndFlags&gt;&gt;5</Item>
+            <Item Condition="_str.fUnion.fFields.fLengthAndFlags&lt;0" Name="Length">_str.fUnion.fFields.fLength</Item>
+            <Item Condition="_str.fUnion.fFields.fLengthAndFlags&amp;2" Name="Capacity">(64-sizeof(void*)-2)/2</Item>
+            <Item Condition="!(_str.fUnion.fFields.fLengthAndFlags&amp;2)" Name="Capacity">_str.fUnion.fFields.fCapacity</Item>
+        </Expand>
+    </Type>
+</AutoVisualizer>

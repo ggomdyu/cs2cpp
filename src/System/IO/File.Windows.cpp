@@ -1,0 +1,206 @@
+#include <array>
+
+#include "System/IO/File.h"
+#include "System/IO/Path.h"
+#include "System/Windows/SafeHandle.h"
+
+CS2CPP_NAMESPACE_BEGIN
+
+namespace detail::file
+{
+
+#if !defined(S_ISREG)
+constexpr bool S_ISREG(unsigned short m) noexcept
+{
+    return (m & S_IFMT) == S_IFREG;
+}
+#endif
+
+std::optional<struct _stat> CreateStat(std::u16string_view path)
+{
+    struct _stat s{};
+    if (_wstat(reinterpret_cast<const wchar_t*>(path.data()), &s) != 0)
+    {
+        return {};
+    }
+
+    return s;
+}
+
+}
+
+bool File::Copy(std::u16string_view srcPath, std::u16string_view destPath, bool overwrite)
+{
+    return CopyFileW(reinterpret_cast<const wchar_t*>(srcPath.data()), reinterpret_cast<const wchar_t*>(destPath.data()),
+        overwrite ? FALSE : TRUE) != 0;
+}
+
+bool File::Delete(std::u16string_view path)
+{
+    auto s = detail::file::CreateStat(path);
+    if (!s || !detail::file::S_ISREG(s->st_mode))
+    {
+        return false;
+    }
+
+    return _wremove(reinterpret_cast<const wchar_t*>(path.data())) == 0;
+}
+
+bool File::Exists(std::u16string_view path)
+{
+    auto s = detail::file::CreateStat(path);
+    if (!s || !detail::file::S_ISREG(s->st_mode))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool File::Move(std::u16string_view srcPath, std::u16string_view destPath)
+{
+    auto s = detail::file::CreateStat(srcPath);
+    if (!s || !detail::file::S_ISREG(s->st_mode))
+    {
+        return false;
+    }
+
+    return _wrename(reinterpret_cast<const wchar_t*>(srcPath.data()), reinterpret_cast<const wchar_t*>(destPath.data())) == 0;
+}
+
+bool File::Decrypt(std::u16string_view path)
+{
+    return !!DecryptFileW(reinterpret_cast<const wchar_t*>(path.data()), 0);
+}
+
+bool File::Encrypt(std::u16string_view path)
+{
+    return !!EncryptFileW(reinterpret_cast<const wchar_t*>(path.data()));
+}
+
+bool File::SetAttributes(std::u16string_view path, FileAttributes fileAttributes)
+{
+    return !!SetFileAttributesW(reinterpret_cast<const wchar_t*>(path.data()), static_cast<DWORD>(fileAttributes));
+}
+
+bool File::SetCreationTimeUtc(std::u16string_view path, DateTime creationTimeUtc)
+{
+    const SafeHandle handle(CreateFile2(reinterpret_cast<const wchar_t*>(path.data()), GENERIC_WRITE,
+        FILE_SHARE_READ, OPEN_EXISTING, nullptr));
+    if (handle == nullptr)
+    {
+        return false;
+    }
+
+    const auto ticks = creationTimeUtc.ToFileTimeUtc();
+    auto fileTime = FILETIME{};
+    fileTime.dwLowDateTime = static_cast<DWORD>(ticks);
+    fileTime.dwHighDateTime = static_cast<DWORD>(ticks >> 32);
+
+    if (SetFileTime(handle, &fileTime, nullptr, nullptr) == 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool File::SetLastAccessTimeUtc(std::u16string_view path, DateTime lastAccessTimeUtc)
+{
+    const SafeHandle handle(CreateFile2(reinterpret_cast<const wchar_t*>(path.data()), GENERIC_WRITE,
+        FILE_SHARE_READ, OPEN_EXISTING, nullptr));
+    if (handle == nullptr)
+    {
+        return false;
+    }
+
+    const auto ticks = lastAccessTimeUtc.ToFileTimeUtc();
+    FILETIME fileTime{static_cast<DWORD>(ticks), static_cast<DWORD>(ticks >> 32)};
+    if (SetFileTime(handle, nullptr, &fileTime, nullptr) == 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool File::SetLastWriteTimeUtc(std::u16string_view path, DateTime lastWriteTimeUtc)
+{
+    const SafeHandle handle(CreateFile2(reinterpret_cast<const wchar_t*>(path.data()), GENERIC_WRITE,
+        FILE_SHARE_READ, OPEN_EXISTING, nullptr));
+    if (handle == nullptr)
+    {
+        return false;
+    }
+
+    const auto ticks = lastWriteTimeUtc.ToFileTimeUtc();
+    const FILETIME fileTime{static_cast<DWORD>(ticks), static_cast<DWORD>(ticks >> 32)};
+    if (SetFileTime(handle, nullptr, nullptr, &fileTime) == 0)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+std::optional<FileAttributes> File::GetAttributes(std::u16string_view path)
+{
+    WIN32_FILE_ATTRIBUTE_DATA fileAttributeData;
+    if (GetFileAttributesExW(reinterpret_cast<const wchar_t*>(path.data()), GetFileExInfoStandard,
+        &fileAttributeData) == FALSE)
+    {
+        return {};
+    }
+
+    return FileAttributes(fileAttributeData.dwFileAttributes);
+}
+
+std::optional<DateTime> File::GetCreationTimeUtc(std::u16string_view path)
+{
+    auto s = detail::file::CreateStat(path);
+    if (!s)
+    {
+        return {};
+    }
+
+    return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_ctime);
+}
+
+std::optional<DateTime> File::GetLastAccessTimeUtc(std::u16string_view path)
+{
+    auto s = detail::file::CreateStat(path);
+    if (!s)
+    {
+        return {};
+    }
+
+    return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_atime);
+}
+
+std::optional<DateTime> File::GetLastWriteTimeUtc(std::u16string_view path)
+{
+    auto s = detail::file::CreateStat(path);
+    if (!s)
+    {
+        return {};
+    }
+
+    return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_mtime);
+}
+
+SafeFilePointer File::InternalFileOpen(std::u16string_view path, std::u16string_view mode)
+{
+    SafeFilePointer fp;
+    _wfopen_s(fp, reinterpret_cast<const wchar_t*>(path.data()), reinterpret_cast<const wchar_t*>(mode.data()));
+
+    return std::move(fp);
+}
+
+bool File::Replace(std::u16string_view srcPath, std::u16string_view destPath, const std::u16string_view* destBackupPath, bool ignoreMetadataErrors)
+{
+    return !!ReplaceFileW(reinterpret_cast<const wchar_t*>(&destPath[0]), reinterpret_cast<const wchar_t*>(&srcPath[0]),
+        destBackupPath ? reinterpret_cast<const wchar_t*>(&destBackupPath[0]) : nullptr,
+        ignoreMetadataErrors ? REPLACEFILE_IGNORE_MERGE_ERRORS : 0, nullptr, nullptr);
+}
+
+CS2CPP_NAMESPACE_END
