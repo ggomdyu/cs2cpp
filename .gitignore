@@ -1,0 +1,5 @@
+.DS_Store
+.idea
+[Bb]uild
+[Bb]in
+cmake-build-debug

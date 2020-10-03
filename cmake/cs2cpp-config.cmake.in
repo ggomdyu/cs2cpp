@@ -1,0 +1,7 @@
+@PACKAGE_INIT@ 
+
+set_and_check(CS2CPP_INCLUDE_DIR "@PACKAGE_INCLUDE_DIR@")
+set_and_check(CS2CPP_LIBRARIES "@PACKAGE_LIBRARIES@")
+
+include("@CMAKE_BINARY_DIR@/cs2cpp-targets.cmake")
+check_required_components(cs2cpp)

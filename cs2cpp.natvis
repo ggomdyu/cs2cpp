@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+    <Type Name="cs::Encoding" Inheritable="false">
+        <DisplayString>{dataItem_->displayName_}</DisplayString>
+        <Expand>
+            <Item Name="CodePage">codePage_</Item>
+            <Item Name="BodyName">dataItem_->bodyName_</Item>
+            <Item Name="EncodingName">dataItem_->displayName_</Item>
+            <Item Name="HeaderName">dataItem_->headerName_</Item>
+            <Item Name="WebName">dataItem_->webName_</Item>
+            <Item Name="Preamble">dataItem_->preamble_</Item>
+        </Expand>
+    </Type>
+    <Type Name="cs::FileStream">
+        <DisplayString>{path_}</DisplayString>
+        <Expand>
+            <Item Name="CanRead">nativeFileHandle_ != (long long)-1 &amp;&amp; ((int)access_ &amp; 1) != 0</Item>
+            <Item Name="Name">path_</Item>
+            <Item Name="Position">filePos_ + writePos_</Item>
+        </Expand>
+    </Type>
+    <Type Name="cs::Span&lt;*&gt;">
+        <Expand>
+            <Item Name="Length">length_</Item>
+            <Item Name="IsEmpty">length_ == 0</Item>
+            <ArrayItems>
+                <Size>length_</Size>
+                <ValuePointer>storage_</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+    <Type Name="cs::ReadOnlySpan&lt;*&gt;">
+        <Expand>
+            <Item Name="Length">length_</Item>
+            <Item Name="IsEmpty">length_ == 0</Item>
+            <ArrayItems>
+                <Size>length_</Size>
+                <ValuePointer>storage_</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+    <Type Name="cs::ConsoleKeyInfo">
+        <Expand>
+            <Item Name="Key">key_</Item>
+            <Item Name="KeyChar">keyChar_</Item>
+            <Item Name="Modifiers">mods_</Item>
+        </Expand>
+    </Type>
+    <Type Name="cs::DateTime">
+        <Expand>
+            <Item Name="DayOfWeek">(cs::DayOfWeek)(((ticks_ &amp; TicksMask) / 864000000000 + 1) % 7)</Item>
+            <Item Name="Hour">((ticks_ &amp; TicksMask) / TimeSpan::TicksPerHour) % 24</Item>
+            <Item Name="Minute">((ticks_ &amp; TicksMask) / TimeSpan::TicksPerMinute) % 60</Item>
+            <Item Name="Second">((ticks_ &amp; TicksMask) / TimeSpan::TicksPerSecond) % 60</Item>
+            <Item Name="Millisecond">((ticks_ &amp; TicksMask) / TimeSpan::TicksPerMillisecond) % 1000</Item>
+            <Item Name="Kind">(cs::DateTimeKind)(ticks_ &gt;&gt; KindShift)</Item>
+            <Item Name="Ticks">ticks_ &amp; TicksMask</Item>
+        </Expand>
+    </Type>
+    <Type Name="cs::TimeSpan">
+        <Expand>
+            <Item Name="Days">ticks_ / TicksPerDay</Item>
+            <Item Name="Hours">(ticks_ / TicksPerHour) % 24</Item>
+            <Item Name="Minutes">(ticks_ / TicksPerMinute) % 60</Item>
+            <Item Name="Seconds">(ticks_ / TicksPerSecond) % 60</Item>
+            <Item Name="Milliseconds">(ticks_ / TicksPerMillisecond) % 1000</Item>
+            <Item Name="TotalDays">(double)ticks_ * DaysPerTick</Item>
+            <Item Name="TotalHours">(double)ticks_ * HoursPerTick</Item>
+            <Item Name="TotalMinutes">(double)ticks_ * MinutesPerTick</Item>
+            <Item Name="TotalSeconds">(double)ticks_ * SecondsPerTick</Item>
+            <Item Name="TotalMilliseconds">(double)ticks_ * MillisecondsPerTick</Item>
+            <Item Name="Ticks">ticks_</Item>
+        </Expand>
+    </Type>
+    <Type Name="cs::TimeZoneInfo">
+        <DisplayString>{displayName_}</DisplayString>
+        <Expand>
+            <Item Name="BaseUtcOffset">baseUtcOffset_</Item>
+            <Item Name="DaylightName">daylightDisplayName_</Item>
+            <Item Name="DisplayName">displayName_</Item>
+            <Item Name="Id">id_</Item>
+            <Item Name="StandardName">standardDisplayName_</Item>
+        </Expand>
+    </Type>
+</AutoVisualizer>

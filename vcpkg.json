@@ -1,0 +1,11 @@
+{
+    "name": "cs2cpp",
+    "version-string": "0.0.1",
+    "description": "A C++17 based library that provides C# style classes",
+    "homepage": "https://github.com/ggomdyu/cs2cpp",
+    "dependencies": [
+        "fmt",
+        "icu",
+        "gtest"
+    ]
+}

@@ -1,0 +1,42 @@
+name: ubuntu-latest
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/README.md'
+
+jobs:
+  build:
+    name: "${{ matrix.os }}:${{ matrix.platform }}-${{ matrix.build }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        build: [Debug, Release]
+
+    steps:
+    - name: Checkout repository and submodules
+      uses: actions/checkout@v1
+      with:
+        submodules: recursive
+
+    - name: Restore cached dependencies
+      uses: actions/cache@v2
+      with:
+        path: |
+          ${{ github.workspace }}/bin/vcpkg_installed
+          ${{ github.workspace }}/external/vcpkg
+        key: ${{ hashFiles('vcpkg.json') }}-${{ hashFiles('.git/modules/external/vcpkg/HEAD') }}-${{ matrix.os }}
+        
+    - name: Configure CMake
+      run: cmake -B bin -DCMAKE_BUILD_TYPE=${{ matrix.build }}
+
+    - name: Build
+      run: cmake --build bin --config ${{ matrix.build }}
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/bin/test/${{ matrix.build }}
+      run: ./test
