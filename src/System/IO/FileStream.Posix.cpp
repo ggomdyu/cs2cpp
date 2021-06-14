@@ -57,7 +57,7 @@ void FileStream::FlushWriteBuffer()
 void* FileStream::InternalOpenHandle(std::u16string_view path, FileMode mode, FileAccess access, FileShare share, FileOptions options)
 {
     if (mode == FileMode::OpenOrCreate && !File::Exists(path))
-        Create(path, FileMode::CreateNew);
+        mode = FileMode::Create;
 
     auto utf8Path = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
         {reinterpret_cast<const std::byte*>(path.data()), sizeof(path[0]) * path.length()});
