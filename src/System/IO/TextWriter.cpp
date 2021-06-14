@@ -6,9 +6,7 @@ CS2CPP_NAMESPACE_BEGIN
 void TextWriter::Write(std::u16string_view value)
 {
     for (auto c : value)
-    {
-        this->Write(c);
-    }
+        Write(c);
 }
 
 void TextWriter::WriteLine(char16_t value)

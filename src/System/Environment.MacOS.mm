@@ -9,19 +9,19 @@ CS2CPP_NAMESPACE_BEGIN
 namespace detail::environment
 {
 
-String GetSpecialDirectory(NSString* path, std::u16string_view postfix)
+std::u16string GetSpecialDirectory(NSString* path, std::u16string_view postfix)
 {
-    return String(reinterpret_cast<const char16_t*>([path
-        cStringUsingEncoding:NSUTF16LittleEndianStringEncoding])) + postfix;
+    std::u16string ret(reinterpret_cast<const char16_t*>([path cStringUsingEncoding:NSUTF16LittleEndianStringEncoding]));
+    ret += postfix;
+    
+    return ret;
 }
 
-String GetSpecialDirectory(NSSearchPathDirectory pathDirectory, NSSearchPathDomainMask pathDomainMask, std::u16string_view postfix)
+std::u16string GetSpecialDirectory(NSSearchPathDirectory pathDirectory, NSSearchPathDomainMask pathDomainMask, std::u16string_view postfix)
 {
     auto paths = NSSearchPathForDirectoriesInDomains(pathDirectory, pathDomainMask, YES);
     if ([paths count] <= 0)
-    {
         return {};
-    }
 
     return GetSpecialDirectory(paths[0], postfix);
 }
@@ -33,7 +33,7 @@ int32_t Environment::GetCurrentManagedThreadId()
     return pthread_mach_thread_np(pthread_self());
 }
 
-String Environment::GetFolderPath(SpecialFolder folder)
+std::u16string Environment::GetFolderPath(SpecialFolder folder)
 {
     using detail::environment::GetSpecialDirectory;
 
@@ -79,23 +79,26 @@ String Environment::GetFolderPath(SpecialFolder folder)
     }
 }
 
-const String& Environment::GetCommandLine()
+const std::u16string& Environment::GetCommandLine()
 {
-    static String commandLine = []()
+    static std::u16string commandLine = []()
     {
-        String ret;
+        std::u16string ret;
 
         auto arguments = [[NSProcessInfo processInfo] arguments];
         for (NSUInteger i = 0; i < [arguments count] - 1; ++i)
         {
-            ret += reinterpret_cast<const char16_t*>([arguments[i]
-                cStringUsingEncoding:NSUTF16LittleEndianStringEncoding]);
-            ret += u" ";
+            auto argument = std::u16string_view(reinterpret_cast<const char16_t*>([arguments[i]
+                cStringUsingEncoding:NSUTF16LittleEndianStringEncoding]));
+            
+            ret += argument;
+            ret += u' ';
         }
-
-        ret += reinterpret_cast<const char16_t*>([arguments[arguments.count - 1]
-            cStringUsingEncoding:NSUTF16LittleEndianStringEncoding]);
-
+        
+        auto argument = std::u16string_view(reinterpret_cast<const char16_t*>([arguments[arguments.count - 1]
+            cStringUsingEncoding:NSUTF16LittleEndianStringEncoding]));
+        ret += argument;
+    
         return ret;
     } ();
 
@@ -104,7 +107,7 @@ const String& Environment::GetCommandLine()
 
 int64_t Environment::GetTickCount()
 {
-    return static_cast<int64_t>(mach_absolute_time() * 0.000001f);
+    return int64_t(mach_absolute_time() * 0.000001f);
 }
 
 CS2CPP_NAMESPACE_END

@@ -33,14 +33,10 @@ constexpr bool PosixPath::IsPathRooted(std::string_view path) noexcept
 inline std::string PosixPath::Combine(std::string_view path1, std::string_view path2)
 {
     if (path2.length() == 0)
-    {
         return std::string(path1);
-    }
 
     if (path1.length() == 0 || IsPathRooted(path2))
-    {
         return std::string(path2);
-    }
 
     std::string ret(path1);
     const auto path1Separator = path1[path1.length() - 1];
@@ -48,9 +44,8 @@ inline std::string PosixPath::Combine(std::string_view path1, std::string_view p
     const auto hasSeparator = (path1Separator == PosixPath::DirectorySeparatorChar) || (path1Separator == PosixPath::AltDirectorySeparatorChar)
         || (path2Separator == PosixPath::DirectorySeparatorChar) || (path2Separator == PosixPath::AltDirectorySeparatorChar);
     if (!hasSeparator)
-    {
         ret += PosixPath::DirectorySeparatorChar;
-    }
+    
     ret += path2;
 
     return ret;

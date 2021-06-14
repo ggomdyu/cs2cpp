@@ -4,17 +4,13 @@
 #include "System/FunctionTraits.h"
 #include "System/IO/StreamReader.h"
 #include "System/IO/StreamWriter.h"
-#include "System/SafeFilePointer.h"
-#include "System/String.h"
 #include "System/Text/Encoding.h"
 
 #include "FileAttributes.h"
 #include "FileStream.h"
+#include "SafeFilePointer.h"
 
 CS2CPP_NAMESPACE_BEGIN
-
-class ReturnVectorTag {};
-class ReturnPointerTag {};
 
 class File final
 {
@@ -53,19 +49,18 @@ public:
     [[nodiscard]] static std::optional<StreamReader> OpenText(std::u16string_view path);
     [[nodiscard]] static std::optional<StreamWriter> CreateText(std::u16string_view path);
     [[nodiscard]] static std::optional<StreamWriter> AppendText(std::u16string_view path);
-    [[nodiscard]] static std::optional<String> ReadAllText(std::u16string_view path);
-    [[nodiscard]] static std::optional<String> ReadAllText(std::u16string_view path, const Encoding& encoding);
+    [[nodiscard]] static std::optional<std::u16string> ReadAllText(std::u16string_view path);
+    [[nodiscard]] static std::optional<std::u16string> ReadAllText(std::u16string_view path, const Encoding& encoding);
     static bool WriteAllText(std::u16string_view path, std::u16string_view contents);
     static bool WriteAllText(std::u16string_view path, std::u16string_view contents, const Encoding& encoding);
-    [[nodiscard]] static std::unique_ptr<std::byte[]> ReadAllBytes(std::u16string_view path, ReturnPointerTag);
-    [[nodiscard]] static std::optional<std::vector<std::byte>> ReadAllBytes(std::u16string_view path, ReturnVectorTag);
+    [[nodiscard]] static std::optional<std::vector<std::byte>> ReadAllBytes(std::u16string_view path);
     static bool WriteAllBytes(std::u16string_view path, gsl::span<const std::byte> bytes);
-    template <typename Pred>
-    static bool ReadLines(std::u16string_view path, const Pred& callback);
-    [[nodiscard]] static std::optional<std::vector<String>> ReadAllLines(std::u16string_view path);
-    [[nodiscard]] static std::optional<std::vector<String>> ReadAllLines(std::u16string_view path, const Encoding& encoding);
-    template <typename Pred>
-    static bool ReadLines(std::u16string_view path, const Encoding& encoding, const Pred& callback);
+    template <typename F>
+    static bool ReadLines(std::u16string_view path, const F& callback);
+    [[nodiscard]] static std::optional<std::vector<std::u16string>> ReadAllLines(std::u16string_view path);
+    [[nodiscard]] static std::optional<std::vector<std::u16string>> ReadAllLines(std::u16string_view path, const Encoding& encoding);
+    template <typename F>
+    static bool ReadLines(std::u16string_view path, const Encoding& encoding, const F& callback);
     static bool WriteAllLines(std::u16string_view path, gsl::span<std::u16string_view> contents);
     static bool WriteAllLines(std::u16string_view path, gsl::span<std::u16string_view> contents, const Encoding& encoding);
     static bool AppendAllText(std::u16string_view path, std::u16string_view contents);
@@ -75,48 +70,40 @@ public:
     static bool Replace(std::u16string_view srcPath, std::u16string_view destPath, const std::u16string_view* destBackupPath, bool ignoreMetadataErrors = false);
 
 private:
-    [[nodiscard]] static std::vector<std::byte> InternalReadAllText(std::u16string_view path);
-    [[nodiscard]] static SafeFilePointer InternalFileOpen(std::u16string_view path, std::u16string_view mode);
+    static std::vector<std::byte> InternalReadAllText(std::u16string_view path);
+    static SafeFilePointer InternalFileOpen(std::u16string_view path, std::u16string_view mode);
     static void InternalWriteAllLines(StreamWriter& writer, gsl::span<std::u16string_view> contents);
     static void InternalWriteAllText(StreamWriter& writer, std::u16string_view contents);
-    [[nodiscard]] static const Encoding& DetectEncoding(gsl::span<const std::byte> bytes) noexcept;
-    [[nodiscard]] static gsl::span<const std::byte> RemoveByteOrderMark(gsl::span<const std::byte> bytes, const Encoding& encoding) noexcept;
+    static const Encoding& DetectEncoding(gsl::span<const std::byte> bytes) noexcept;
+    static gsl::span<const std::byte> RemoveByteOrderMark(gsl::span<const std::byte> bytes, const Encoding& encoding) noexcept;
 };
 
-template <typename Pred>
-bool File::ReadLines(std::u16string_view path, const Pred& callback)
+template <typename F>
+bool File::ReadLines(std::u16string_view path, const F& callback)
 {
     return ReadLines(path, Encoding::UTF8(), callback);
 }
 
-template <typename Pred>
-bool File::ReadLines(std::u16string_view path, const Encoding& encoding, const Pred& callback)
+template <typename F>
+bool File::ReadLines(std::u16string_view path, const Encoding& encoding, const F& callback)
 {
     auto reader = StreamReader::Create(path, encoding);
     if (!reader)
-    {
         return false;
-    }
 
     while (true)
     {
         auto line = reader->ReadLine();
         if (!line)
-        {
             break;
-        }
 
-        if constexpr (std::is_same_v<typename FunctionTraits<Pred>::Return, bool>)
+        if constexpr (std::is_same_v<typename FunctionTraits<F>::Return, bool>)
         {
             if (!callback(std::move(*line)))
-            {
                 break;
-            }
         }
         else
-        {
             callback(std::move(*line));
-        }
     }
 
     return true;

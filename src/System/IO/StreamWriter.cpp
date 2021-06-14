@@ -41,10 +41,8 @@ std::optional<StreamWriter> StreamWriter::Create(std::u16string_view path)
 std::optional<StreamWriter> StreamWriter::Create(std::u16string_view path, bool append)
 {
     auto fs = CreateFileStream(path, append);
-    if (fs == nullptr)
-    {
+    if (!fs)
         return {};
-    }
 
     // Don't write preamble.
     return StreamWriter(std::move(fs), Encoding::UTF8(), DefaultBufferSize, false, true);
@@ -58,10 +56,8 @@ std::optional<StreamWriter> StreamWriter::Create(std::u16string_view path, bool 
 std::optional<StreamWriter> StreamWriter::Create(std::u16string_view path, bool append, const Encoding& encoding, int32_t bufferSize)
 {
     auto fs = CreateFileStream(path, append);
-    if (fs == nullptr)
-    {
+    if (!fs)
         return {};
-    }
 
     bool haveWrittenPreamble = fs->CanSeek() && fs->Position() > 0;
     return StreamWriter(std::move(fs), encoding, bufferSize, false, haveWrittenPreamble);
@@ -79,11 +75,9 @@ std::shared_ptr<Stream> StreamWriter::GetBaseStream() const noexcept
 
 void StreamWriter::Write(char16_t value)
 {
-    auto& charBuffer = this->GetCharBuffer();
+    auto& charBuffer = GetCharBuffer();
     if (_charPos == charBuffer.size())
-    {
-        this->Flush();
-    }
+        Flush();
 
     charBuffer[_charPos++] = value;
 }
@@ -91,28 +85,21 @@ void StreamWriter::Write(char16_t value)
 void StreamWriter::Flush()
 {
     if (!_stream)
-    {
         return;
-    }
 
     if (!_haveWrittenPreamble)
     {
         _haveWrittenPreamble = true;
         if (!_encoding.GetPreamble().empty())
-        {
             _stream->Write(_encoding.GetPreamble());
-        }
     }
 
-    auto& byteBuffer = this->GetByteBuffer();
+    auto& byteBuffer = GetByteBuffer();
 
     auto convertedBytes = Encoding::Convert(Encoding::Unicode(), _encoding,
-        {reinterpret_cast<const std::byte*>(this->GetCharBuffer().data()), _charPos * sizeof(char16_t)},
-        byteBuffer);
+        {reinterpret_cast<const std::byte*>(GetCharBuffer().data()), _charPos * sizeof(char16_t)}, byteBuffer);
     if (convertedBytes && *convertedBytes > 0)
-    {
         _stream->Write(byteBuffer.data(), *convertedBytes);
-    }
 
     _stream->Flush();
     _charPos = 0;
@@ -121,11 +108,9 @@ void StreamWriter::Flush()
 void StreamWriter::Close()
 {
     if (!_stream || _leaveOpen)
-    {
         return;
-    }
 
-    this->Flush();
+    Flush();
     _stream->Close();
 }
 
@@ -143,9 +128,7 @@ std::vector<std::byte>& StreamWriter::GetByteBuffer()
 std::vector<char16_t>& StreamWriter::GetCharBuffer()
 {
     if (_charBuffer.empty())
-    {
         _charBuffer.resize(static_cast<size_t>(_bufferSize));
-    }
 
     return _charBuffer;
 }

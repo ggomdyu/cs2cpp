@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <memory>
 
 #include "Windows.h"
 
@@ -9,51 +10,22 @@ CS2CPP_NAMESPACE_BEGIN
 class SafeRegistryHandle final
 {
 public:
-    constexpr SafeRegistryHandle() noexcept = default;
-    constexpr explicit SafeRegistryHandle(HKEY keyHandle) noexcept;
-    SafeRegistryHandle(const SafeRegistryHandle& rhs) = delete;
-    SafeRegistryHandle(SafeRegistryHandle&& rhs) noexcept;
+    explicit SafeRegistryHandle(HKEY handle = nullptr) noexcept;
 
 public:
-    ~SafeRegistryHandle();
-
-public:
-    SafeRegistryHandle& operator=(const SafeRegistryHandle& rhs) = delete;
-    SafeRegistryHandle& operator=(SafeRegistryHandle&& rhs) noexcept;
-    [[nodiscard]] constexpr bool operator==(const SafeRegistryHandle& rhs) const noexcept;
-    [[nodiscard]] constexpr bool operator!=(const SafeRegistryHandle& rhs) const noexcept;
-    [[nodiscard]] constexpr bool operator==(std::nullptr_t rhs) const noexcept;
-    [[nodiscard]] constexpr bool operator!=(std::nullptr_t rhs) const noexcept;
-    [[nodiscard]] operator PHKEY() noexcept;
-    [[nodiscard]] operator HKEY() const noexcept;
+    constexpr bool operator==(const SafeRegistryHandle& rhs) const noexcept;
+    constexpr bool operator!=(const SafeRegistryHandle& rhs) const noexcept;
+    constexpr bool operator==(std::nullptr_t rhs) const noexcept;
+    constexpr bool operator!=(std::nullptr_t rhs) const noexcept;
+    operator HKEY() const noexcept;
 
 private:
-    HKEY _handle = nullptr;
+    std::unique_ptr<std::remove_pointer_t<HKEY>, decltype(&CloseHandle)> _handle;
 };
 
-constexpr SafeRegistryHandle::SafeRegistryHandle(HKEY keyHandle) noexcept :
-    _handle(keyHandle)
+inline SafeRegistryHandle::SafeRegistryHandle(HKEY handle) noexcept :
+    _handle(handle, CloseHandle)
 {
-}
-
-inline SafeRegistryHandle::SafeRegistryHandle(SafeRegistryHandle&& rhs) noexcept :
-    _handle(rhs._handle)
-{
-    rhs._handle = nullptr;
-}
-
-inline SafeRegistryHandle::~SafeRegistryHandle()
-{
-    if (_handle != nullptr)
-    {
-        CloseHandle(_handle);
-    }
-}
-
-inline SafeRegistryHandle& SafeRegistryHandle::operator=(SafeRegistryHandle&& rhs) noexcept
-{
-    std::swap(_handle, rhs._handle);
-    return *this;
 }
 
 constexpr bool SafeRegistryHandle::operator==(const SafeRegistryHandle& rhs) const noexcept
@@ -76,14 +48,9 @@ constexpr bool SafeRegistryHandle::operator!=(std::nullptr_t) const noexcept
     return _handle != nullptr;
 }
 
-inline SafeRegistryHandle::operator PHKEY() noexcept
-{
-    return &_handle;
-}
-
 inline SafeRegistryHandle::operator HKEY() const noexcept
 {
-    return _handle;
+    return _handle.get();
 }
 
 CS2CPP_NAMESPACE_END

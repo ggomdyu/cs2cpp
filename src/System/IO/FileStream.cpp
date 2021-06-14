@@ -52,7 +52,7 @@ FileStream::FileStream(FileStream&& rhs) noexcept :
 
 FileStream::~FileStream()
 {
-    this->InternalClose();
+    InternalClose();
 }
 
 FileStream& FileStream::operator=(FileStream&& rhs) noexcept
@@ -78,12 +78,13 @@ bool FileStream::operator==(const FileStream& rhs) const noexcept
 
 bool FileStream::operator!=(const FileStream& rhs) const noexcept
 {
-    return !this->operator==(rhs);
+    return !operator==(rhs);
 }
 
 std::shared_ptr<FileStream> FileStream::Create(std::u16string_view path, FileMode mode)
 {
-    return Create(path, mode, (mode == FileMode::Append ? FileAccess::Write : FileAccess::ReadWrite), DefaultShare, DefaultFileOption, DefaultBufferSize);
+    return Create(path, mode, (mode == FileMode::Append ? FileAccess::Write : FileAccess::ReadWrite), DefaultShare,
+        DefaultFileOption, DefaultBufferSize);
 }
 
 std::shared_ptr<FileStream> FileStream::Create(std::u16string_view path, FileMode mode, FileAccess access)
@@ -104,59 +105,47 @@ std::shared_ptr<FileStream> FileStream::Create(std::u16string_view path, FileMod
 std::shared_ptr<FileStream> FileStream::Create(std::u16string_view path, FileMode mode, FileAccess access, FileShare share, FileOptions options, int32_t bufferSize)
 {
     if (bufferSize <= 0)
-    {
         return {};
-    }
 
     auto nativeFileHandle = InternalOpenHandle(path, mode, access, share, options);
     if (nativeFileHandle == NullNativeFileHandle)
-    {
         return {};
-    }
 
     auto fileStream = std::make_shared<detail::filestream::FileStream>(nativeFileHandle, path, access, bufferSize);
     if (mode == FileMode::Append)
-    {
         fileStream->Seek(0, SeekOrigin::End);
-    }
 
     return std::move(fileStream);
 }
 
 bool FileStream::CanRead() const noexcept
 {
-    return !this->IsClosed() && (static_cast<int32_t>(_access) & static_cast<int32_t>(FileAccess::Read)) != 0;
+    return !IsClosed() && (size_t(_access) & size_t(FileAccess::Read)) != 0;
 }
 
 bool FileStream::CanSeek() const noexcept
 {
-    return !this->IsClosed();
+    return !IsClosed();
 }
 
 bool FileStream::CanWrite() const noexcept
 {
-    return !this->IsClosed() && (static_cast<int32_t>(_access) & static_cast<int32_t>(FileAccess::Write)) != 0;
+    return !IsClosed() && (size_t(_access) & size_t(FileAccess::Write)) != 0;
 }
 
 bool FileStream::SetLength(int64_t value)
 {
     if (value < 0 || IsClosed() || !CanSeek() || !CanWrite())
-    {
         return false;
-    }
 
     // If the write buffer is not empty
     if (_writePos > 0)
-    {
-        this->FlushWriteBuffer();
-    }
+        FlushWriteBuffer();
     // If the read buffer is not empty
     else if (_readPos < _readLen)
-    {
-        this->FlushReadBuffer();
-    }
+        FlushReadBuffer();
 
-    return this->InternalSetLength(value);
+    return InternalSetLength(value);
 }
 
 int64_t FileStream::Position() const
@@ -166,16 +155,12 @@ int64_t FileStream::Position() const
 
 int64_t FileStream::Seek(int64_t offset, SeekOrigin origin)
 {
-    if (!this->CanSeek())
-    {
+    if (!CanSeek())
         return -1;
-    }
 
     // If the write buffer is not empty
     if (_writePos > 0)
-    {
-        this->FlushWriteBuffer();
-    }
+        FlushWriteBuffer();
     else if (origin == SeekOrigin::Current)
     {
         // If we've read the buffer once before, then the seek offset is automatically moved to the end of the buffer.
@@ -190,11 +175,11 @@ int64_t FileStream::Seek(int64_t offset, SeekOrigin origin)
 
 void FileStream::Close()
 {
-    this->Flush();
-    this->InternalClose();
+    Flush();
+    InternalClose();
 }
 
-const String& FileStream::Name() const noexcept
+const std::u16string& FileStream::Name() const noexcept
 {
     return _path;
 }
@@ -206,39 +191,33 @@ bool FileStream::IsClosed() const noexcept
 
 void FileStream::Flush()
 {
-    this->Flush(false);
+    Flush(false);
 }
 
 std::vector<std::byte>& FileStream::GetBuffer()
 {
     if (_buffer.empty())
-    {
         _buffer.resize(_bufferSize);
-    }
 
     return _buffer;
 }
 
 int32_t FileStream::Read(std::byte* bytes, int32_t count)
 {
-    if (!this->CanRead() || _bufferSize < count)
-    {
+    if (!CanRead() || _bufferSize < count)
         return 0;
-    }
 
     auto leftReadBufferSpace = _readLen - _readPos;
     if (leftReadBufferSpace == 0)
     {
-        this->FlushWriteBuffer();
+        FlushWriteBuffer();
 
-        auto readBytes = this->InternalRead(&this->GetBuffer()[0], _bufferSize);
+        auto readBytes = InternalRead(&GetBuffer()[0], _bufferSize);
         _readPos = 0;
         _readLen = leftReadBufferSpace = readBytes;
 
         if (readBytes == 0)
-        {
             return 0;
-        }
     }
 
     auto copiedBytes = std::min(leftReadBufferSpace, count);
@@ -251,24 +230,20 @@ int32_t FileStream::Read(std::byte* bytes, int32_t count)
 
 int32_t FileStream::ReadByte()
 {
-    if (!this->CanRead())
-    {
+    if (!CanRead())
         return -1;
-    }
 
     int32_t leftReadBufferSpace = _readLen - _readPos;
     if (leftReadBufferSpace == 0)
     {
-        this->FlushWriteBuffer();
+        FlushWriteBuffer();
 
-        auto readBytes = this->InternalRead(&this->GetBuffer()[0], _bufferSize);
+        auto readBytes = InternalRead(&GetBuffer()[0], _bufferSize);
         _readPos = 0;
         _readLen = readBytes;
 
         if (readBytes == 0)
-        {
             return -1;
-        }
     }
 
     return static_cast<int32_t>(_buffer[_readPos++]);
@@ -276,16 +251,14 @@ int32_t FileStream::ReadByte()
 
 bool FileStream::Write(const std::byte* bytes, int32_t count)
 {
-    if (!this->CanWrite())
-    {
+    if (!CanWrite())
         return false;
-    }
 
-    this->FlushReadBuffer();
+    FlushReadBuffer();
 
     if (_writePos > 0)
     {
-        const int32_t numBytes = _bufferSize - _writePos;
+        int32_t numBytes = _bufferSize - _writePos;
         if (numBytes > 0)
         {
             // If the specified buffer can be stored into the m_buffer directly
@@ -302,12 +275,12 @@ bool FileStream::Write(const std::byte* bytes, int32_t count)
             count -= numBytes;
         }
 
-        this->FlushWriteBuffer();
+        FlushWriteBuffer();
     }
 
     if (_bufferSize < count)
     {
-        this->InternalWrite(bytes, count);
+        InternalWrite(bytes, count);
         return true;
     }
 
@@ -319,19 +292,15 @@ bool FileStream::Write(const std::byte* bytes, int32_t count)
 
 bool FileStream::WriteByte(std::byte value)
 {
-    if (!this->CanWrite())
-    {
+    if (!CanWrite())
         return false;
-    }
 
-    this->FlushReadBuffer();
+    FlushReadBuffer();
 
     if (_writePos == _bufferSize)
-    {
-        this->FlushWriteBuffer();
-    }
+        FlushWriteBuffer();
 
-    this->GetBuffer()[_writePos++] = value;
+    GetBuffer()[_writePos++] = value;
 
     return true;
 }
@@ -339,35 +308,25 @@ bool FileStream::WriteByte(std::byte value)
 void FileStream::FlushReadBuffer()
 {
     if (_writePos != 0)
-    {
         return;
-    }
 
     // We must rewind the seek pointer if a write occurred.
     int32_t rewindOffset = _readPos - _readLen;
     if (rewindOffset != 0)
-    {
-        this->InternalSeek(rewindOffset, SeekOrigin::Current);
-    }
+        InternalSeek(rewindOffset, SeekOrigin::Current);
 
     _readLen = _readPos = 0;
 }
 
 void FileStream::Flush(bool flushToDisk)
 {
-    if (_writePos > 0 && this->CanWrite())
-    {
-        this->FlushWriteBuffer();
-    }
-    else if (_readPos < _readLen && this->CanSeek())
-    {
-        this->FlushReadBuffer();
-    }
+    if (_writePos > 0 && CanWrite())
+        FlushWriteBuffer();
+    else if (_readPos < _readLen && CanSeek())
+        FlushReadBuffer();
 
     if (flushToDisk)
-    {
-        this->InternalFlush();
-    }
+        InternalFlush();
 }
 
 CS2CPP_NAMESPACE_END

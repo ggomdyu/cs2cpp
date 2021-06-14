@@ -1,6 +1,7 @@
 #pragma once
 
-#include "String.h"
+#include <fmt/format.h>
+#include <string>
 
 CS2CPP_NAMESPACE_BEGIN
 
@@ -28,8 +29,8 @@ public:
     [[nodiscard]] constexpr int16_t GetMinorRevision() const noexcept;
     [[nodiscard]] constexpr int32_t GetHashCode() const noexcept;
     [[nodiscard]] constexpr int32_t CompareTo(const Version& rhs) const noexcept;
-    [[nodiscard]] String ToString() const;
-    [[nodiscard]] String ToString(int32_t fieldCount) const;
+    [[nodiscard]] std::u16string ToString() const;
+    [[nodiscard]] std::u16string ToString(int32_t fieldCount) const;
 
 private:
     int32_t _major = 0;
@@ -61,22 +62,22 @@ constexpr Version::Version(int32_t major, int32_t minor) noexcept :
 
 constexpr bool Version::operator==(const Version& rhs) const noexcept
 {
-    return this->CompareTo(rhs) == 0;
+    return CompareTo(rhs) == 0;
 }
 
 constexpr bool Version::operator!=(const Version& rhs) const noexcept
 {
-    return !this->operator==(rhs);
+    return !operator==(rhs);
 }
 
 constexpr bool Version::operator<(const Version& rhs) const noexcept
 {
-    return this->CompareTo(rhs) < 0;
+    return CompareTo(rhs) < 0;
 }
 
 constexpr bool Version::operator<=(const Version& rhs) const noexcept
 {
-    return this->CompareTo(rhs) <= 0;
+    return CompareTo(rhs) <= 0;
 }
 
 constexpr bool Version::operator>(const Version& rhs) const noexcept
@@ -121,56 +122,39 @@ constexpr int16_t Version::GetMinorRevision() const noexcept
 
 constexpr int32_t Version::GetHashCode() const noexcept
 {
-    int32_t accumulator = 0;
-    accumulator |= (_major & 0x0000000F) << 28;
-    accumulator |= (_minor & 0x000000FF) << 20;
-    accumulator |= (_build & 0x000000FF) << 12;
-    accumulator |= (_revision & 0x00000FFF);
-
-    return accumulator;
+    return ((_major & 0x0000000f) << 28) | ((_minor & 0x000000ff) << 20) | ((_build & 0x000000ff) << 12) |
+        ((_revision & 0x00000fff));
 }
 
 constexpr int32_t Version::CompareTo(const Version& rhs) const noexcept
 {
     if (_major != rhs._major)
-    {
         return _major > rhs._major ? 1 : -1;
-    }
 
     if (_minor != rhs._minor)
-    {
         return _minor > rhs._minor ? 1 : -1;
-    }
 
     if (_build != rhs._build)
-    {
         return _build > rhs._build ? 1 : -1;
-    }
 
     if (_revision != rhs._revision)
-    {
         return _revision > rhs._revision ? 1 : -1;
-    }
 
     return 0;
 }
 
-inline String Version::ToString() const
+inline std::u16string Version::ToString() const
 {
     if (_build == -1)
-    {
-        return this->ToString(2);
-    }
+        return ToString(2);
 
     if (_revision == -1)
-    {
-        return this->ToString(3);
-    }
+        return ToString(3);
 
-    return this->ToString(4);
+    return ToString(4);
 }
 
-inline String Version::ToString(int32_t fieldCount) const
+inline std::u16string Version::ToString(int32_t fieldCount) const
 {
     switch (fieldCount)
     {
@@ -178,31 +162,23 @@ inline String Version::ToString(int32_t fieldCount) const
         return {};
 
     case 1:
-        return String::Format(u"{}", _major);
+        return fmt::format(u"{}", _major);
 
     case 2:
-        return String::Format(u"{}.{}", _major, _minor);
+        return fmt::format(u"{}.{}", _major, _minor);
 
     default:
         if (_build == -1)
-        {
             return {};
-        }
 
         if (fieldCount == 3)
-        {
-            return String::Format(u"{}.{}.{}", _major, _minor, _build);
-        }
+            return fmt::format(u"{}.{}.{}", _major, _minor, _build);
 
         if (_revision == -1)
-        {
             return {};
-        }
 
         if (fieldCount == 4)
-        {
-            return String::Format(u"{}.{}.{}.{}", _major, _minor, _build, _revision);
-        }
+            return fmt::format(u"{}.{}.{}.{}", _major, _minor, _build, _revision);
 
         return {};
     }

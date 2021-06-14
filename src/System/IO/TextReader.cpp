@@ -12,11 +12,9 @@ int32_t TextReader::Read(char16_t* bytes, int32_t count)
     int32_t n = 0;
     for (; n < count; ++n)
     {
-        const auto c = this->Read();
+        auto c = Read();
         if (c == -1)
-        {
             break;
-        }
 
         bytes[n] = c;
     }
@@ -24,48 +22,40 @@ int32_t TextReader::Read(char16_t* bytes, int32_t count)
     return n;
 }
 
-std::optional<String> TextReader::ReadLine()
+std::optional<std::u16string> TextReader::ReadLine()
 {
-    String ret;
+    std::u16string ret;
     while (true)
     {
-        const auto c = this->Read();
+        auto c = Read();
         if (c == -1)
-        {
             break;
-        }
 
         if (c == u'\r' || c == u'\n')
         {
-            if (c == u'\r' && this->Peek() == u'\n')
-            {
-                this->Read();
-            }
+            if (c == u'\r' && Peek() == u'\n')
+                Read();
 
-            return std::move(ret);
+            return std::optional<std::u16string>(std::move(ret));
         }
 
-        ret += static_cast<char16_t>(c);
+        ret.push_back(c);
     }
 
-    if (ret.Length() > 0)
-    {
-        return std::move(ret);
-    }
+    if (ret.size() > 0)
+        return std::optional<std::u16string>(std::move(ret));
 
     return {};
 }
 
-String TextReader::ReadToEnd()
+std::u16string TextReader::ReadToEnd()
 {
-    String ret;
+    std::u16string ret;
 
     std::array<char16_t, 4096> buffer{};
     int32_t readLen;
-    while ((readLen = this->Read(buffer)) != 0)
-    {
-        ret += std::u16string_view(buffer.data(), static_cast<size_t>(readLen));
-    }
+    while ((readLen = Read(buffer)) != 0)
+        ret.insert(ret.cend(), buffer.data(), buffer.data() + readLen);
 
     return ret;
 }

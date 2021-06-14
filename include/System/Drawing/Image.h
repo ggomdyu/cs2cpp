@@ -56,14 +56,14 @@ private:
     Image(std::unique_ptr<std::byte[]> imageData, int32_t width, int32_t height, PixelFormat pixelFormat);
 
 public:
-    [[nodiscard]] bool operator==(std::nullptr_t rhs) const noexcept;
-    [[nodiscard]] bool operator!=(std::nullptr_t rhs) const noexcept;
-    [[nodiscard]] std::byte& operator[](int32_t index);
-    [[nodiscard]] std::byte operator[](int32_t index) const;
+    bool operator==(std::nullptr_t rhs) const noexcept;
+    bool operator!=(std::nullptr_t rhs) const noexcept;
+    std::byte& operator[](int32_t index);
+    std::byte operator[](int32_t index) const;
 
 public:
-    [[nodiscard]] static std::optional<Image> Create(const char16_t* filePath);
-    [[nodiscard]] static std::optional<Image> Create(gsl::span<const std::byte> bytes);
+    static std::optional<Image> Create(const char16_t* filePath);
+    static std::optional<Image> Create(gsl::span<const std::byte> bytes);
     [[nodiscard]] std::byte* GetImageData() noexcept;
     [[nodiscard]] const std::byte* GetImageData() const noexcept;
     [[nodiscard]] int32_t GetWidth() const noexcept;

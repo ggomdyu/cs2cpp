@@ -16,58 +16,58 @@ public:
     FileSystemEnumerable() = delete;
 
 public:
-    template <typename Pred>
-    static void EnumerateDirectories(std::u16string_view path, const Pred& callback);
-    template <typename Pred>
-    static void EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, const Pred& callback);
-    template <typename Pred>
-    static void EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const Pred& callback);
-    template <typename Pred>
-    static void EnumerateFiles(std::u16string_view path, const Pred& callback);
-    template <typename Pred>
-    static void EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, const Pred& callback);
-    template <typename Pred>
-    static void EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const Pred& callback);
-    template <typename Pred>
-    static void EnumerateFileSystemEntries(std::u16string_view path, const Pred& callback);
-    template <typename Pred>
-    static void EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, const Pred& callback);
-    template <typename Pred>
-    static void EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const Pred& callback);
+    template <typename F>
+    static void EnumerateDirectories(std::u16string_view path, const F& callback);
+    template <typename F>
+    static void EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, const F& callback);
+    template <typename F>
+    static void EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback);
+    template <typename F>
+    static void EnumerateFiles(std::u16string_view path, const F& callback);
+    template <typename F>
+    static void EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, const F& callback);
+    template <typename F>
+    static void EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback);
+    template <typename F>
+    static void EnumerateFileSystemEntries(std::u16string_view path, const F& callback);
+    template <typename F>
+    static void EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, const F& callback);
+    template <typename F>
+    static void EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback);
 };
 
-template <typename Pred>
-void FileSystemEnumerable::EnumerateDirectories(std::u16string_view path, const Pred& callback)
+template <typename F>
+void FileSystemEnumerable::EnumerateDirectories(std::u16string_view path, const F& callback)
 {
     FileSystemEnumerable::EnumerateDirectories(path, u"*", callback);
 }
 
-template <typename Pred>
-void FileSystemEnumerable::EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, const Pred& callback)
+template <typename F>
+void FileSystemEnumerable::EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, const F& callback)
 {
     FileSystemEnumerable::EnumerateDirectories(path, searchPattern, SearchOption::TopDirectoryOnly, callback);
 }
 
-template <typename Pred>
-void FileSystemEnumerable::EnumerateFiles(std::u16string_view path, const Pred& callback)
+template <typename F>
+void FileSystemEnumerable::EnumerateFiles(std::u16string_view path, const F& callback)
 {
     FileSystemEnumerable::EnumerateFiles(path, u"*", callback);
 }
 
-template <typename Pred>
-void FileSystemEnumerable::EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, const Pred& callback)
+template <typename F>
+void FileSystemEnumerable::EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, const F& callback)
 {
     FileSystemEnumerable::EnumerateFiles(path, searchPattern, SearchOption::TopDirectoryOnly, callback);
 }
 
-template <typename Pred>
-void FileSystemEnumerable::EnumerateFileSystemEntries(std::u16string_view path, const Pred& callback)
+template <typename F>
+void FileSystemEnumerable::EnumerateFileSystemEntries(std::u16string_view path, const F& callback)
 {
     FileSystemEnumerable::EnumerateFileSystemEntries(path, u"*", callback);
 }
 
-template <typename Pred>
-void FileSystemEnumerable::EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, const Pred& callback)
+template <typename F>
+void FileSystemEnumerable::EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, const F& callback)
 {
     FileSystemEnumerable::EnumerateFileSystemEntries(path, searchPattern, SearchOption::TopDirectoryOnly, callback);
 }

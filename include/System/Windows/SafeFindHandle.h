@@ -20,11 +20,11 @@ public:
 public:
     SafeFindHandle& operator=(const SafeFindHandle& rhs) = delete;
     SafeFindHandle& operator=(SafeFindHandle&& rhs) noexcept;
-    [[nodiscard]] constexpr bool operator==(const SafeFindHandle& rhs) const noexcept;
-    [[nodiscard]] constexpr bool operator!=(const SafeFindHandle& rhs) const noexcept;
-    [[nodiscard]] bool operator==(std::nullptr_t rhs) const noexcept;
-    [[nodiscard]] bool operator!=(std::nullptr_t rhs) const noexcept;
-    [[nodiscard]] operator HANDLE() const noexcept;
+    constexpr bool operator==(const SafeFindHandle& rhs) const noexcept;
+    constexpr bool operator!=(const SafeFindHandle& rhs) const noexcept;
+    bool operator==(std::nullptr_t rhs) const noexcept;
+    bool operator!=(std::nullptr_t rhs) const noexcept;
+    operator HANDLE() const noexcept;
 
 private:
     HANDLE _handle = INVALID_HANDLE_VALUE;

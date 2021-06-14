@@ -10,28 +10,12 @@ public:
     Stopwatch() noexcept;
 
 public:
-    /**@brief   Starts measuring elapsed time. */
     void Start();
-
-    /**@brief   Resets elapsed time. */
     void Reset();
-
-    /**@brief   Stops measuring elapsed time. */
     void Stop() noexcept;
-
-    /**
-     * @brief   Gets a value indicating whether the timer is running.
-     * @return  True if the instance is currently running and measuring elapsed time; otherwise, false.
-     */
     [[nodiscard]] bool IsRunning() const noexcept;
-
-    /**@brief   Gets the total elapsed time measured by the current instance in seconds. */
     [[nodiscard]] int64_t GetElapsedSeconds() const;
-
-    /**@brief   Gets the total elapsed time measured by the current instance in milliseconds. */
     [[nodiscard]] int64_t GetElapsedMilliseconds() const;
-
-    /**@brief   Gets the total elapsed time measured by the current instance in nanoseconds. */
     [[nodiscard]] int64_t GetElapsedNanoseconds() const;
 
 private:

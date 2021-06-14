@@ -6,20 +6,17 @@ CS2CPP_NAMESPACE_BEGIN
 DirectoryInfo Directory::CreateDirectory(std::u16string_view path)
 {
     auto fullPath = Path::GetFullPath(path);
-    if (fullPath.Length() > 0 && !Path::IsDirectorySeparator(fullPath[fullPath.Length() - 1]))
-    {
+    if (fullPath.length() > 0 && !Path::IsDirectorySeparator(fullPath[fullPath.length() - 1]))
         fullPath += Path::DirectorySeparatorChar;
-    }
 
-    for (int32_t i = Path::IsDirectorySeparator(fullPath[0]) ? 1 : 0; i < fullPath.Length(); ++i)
+    for (int32_t i = Path::IsDirectorySeparator(fullPath[0]) ? 1 : 0; i < fullPath.length(); ++i)
     {
-        const auto c = fullPath[i];
+        auto c = fullPath[i];
         if (Path::IsDirectorySeparator(c))
         {
-            fullPath._str.setCharAt(i, 0);
+            fullPath[i] = 0;
             InternalCreateDirectory(&fullPath[0]);
-
-            fullPath._str.setCharAt(i, c);
+            fullPath[i] = c;
         }
     }
 
@@ -29,15 +26,11 @@ DirectoryInfo Directory::CreateDirectory(std::u16string_view path)
 DirectoryInfo Directory::GetParent(std::u16string_view path)
 {
     if (path.length() == 0)
-    {
         return DirectoryInfo(u"", FullPathTag{});
-    }
 
-    String parent(path);
-    if (!Path::IsDirectorySeparator(parent[parent.Length() - 1]))
-    {
+    std::u16string parent(path);
+    if (!Path::IsDirectorySeparator(parent[parent.length() - 1]))
         parent += Path::DirectorySeparatorChar;
-    }
 
     parent += u"../";
 
@@ -104,16 +97,16 @@ std::optional<DateTime> Directory::GetLastWriteTimeUtc(std::u16string_view path)
     return File::GetLastWriteTimeUtc(path);
 }
 
-String Directory::GetDirectoryRoot(std::u16string_view path)
+std::u16string Directory::GetDirectoryRoot(std::u16string_view path)
 {
-    const auto fullPath = Path::GetFullPath(path);
-    return fullPath.Substring(0, Path::GetRootLength(fullPath));
+    auto fullPath = Path::GetFullPath(path);
+    return fullPath.substr(0, Path::GetRootLength(fullPath));
 }
 
-std::vector<String> Directory::GetDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
+std::vector<std::u16string> Directory::GetDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
 {
-    std::vector<String> ret;
-    EnumerateDirectories(path, searchPattern, searchOption, [&](String&& str)
+    std::vector<std::u16string> ret;
+    EnumerateDirectories(path, searchPattern, searchOption, [&](std::u16string&& str)
     {
         ret.push_back(std::move(str));
     });
@@ -121,10 +114,10 @@ std::vector<String> Directory::GetDirectories(std::u16string_view path, std::u16
     return ret;
 }
 
-std::vector<String> Directory::GetFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
+std::vector<std::u16string> Directory::GetFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
 {
-    std::vector<String> ret;
-    EnumerateFiles(path, searchPattern, searchOption, [&](String&& str)
+    std::vector<std::u16string> ret;
+    EnumerateFiles(path, searchPattern, searchOption, [&](std::u16string&& str)
     {
         ret.push_back(std::move(str));
     });
@@ -132,10 +125,10 @@ std::vector<String> Directory::GetFiles(std::u16string_view path, std::u16string
     return ret;
 }
 
-std::vector<String> Directory::GetFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
+std::vector<std::u16string> Directory::GetFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
 {
-    std::vector<String> ret;
-    EnumerateFileSystemEntries(path, searchPattern, searchOption, [&](String&& str)
+    std::vector<std::u16string> ret;
+    EnumerateFileSystemEntries(path, searchPattern, searchOption, [&](std::u16string&& str)
     {
         ret.push_back(std::move(str));
     });

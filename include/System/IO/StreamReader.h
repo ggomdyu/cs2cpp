@@ -19,8 +19,6 @@ public:
     StreamReader(std::shared_ptr<Stream> stream, bool detectEncodingFromByteOrderMarks) noexcept;
     StreamReader(const StreamReader& rhs) = delete;
     StreamReader(StreamReader&& rhs) noexcept = default;
-
-public:
     ~StreamReader() override = default;
 
 public:
@@ -29,7 +27,6 @@ public:
 
 public:
     using TextReader::Read;
-
     [[nodiscard]] static std::optional<StreamReader> Create(std::u16string_view path);
     [[nodiscard]] static std::optional<StreamReader> Create(std::u16string_view path, bool detectEncodingFromByteOrderMarks);
     [[nodiscard]] static std::optional<StreamReader> Create(std::u16string_view path, const Encoding& encoding);
@@ -37,19 +34,19 @@ public:
     [[nodiscard]] static std::optional<StreamReader> Create(std::u16string_view path, const Encoding& encoding, bool detectEncodingFromByteOrderMarks, int32_t bufferSize);
     [[nodiscard]] const Encoding& GetCurrentEncoding() const noexcept;
     [[nodiscard]] std::shared_ptr<Stream> GetBaseStream() const noexcept;
-    [[nodiscard]] bool IsEndOfStream() const noexcept; 
+    [[nodiscard]] bool IsEndOfStream() const noexcept;
     void Close() override;
     int32_t Peek() override;
     int32_t Read() override;
 
 private:
     [[nodiscard]] Encoding CloneEncoding(const Encoding& encoding) const;
-    [[nodiscard]] int32_t ReadBuffer();
-    [[nodiscard]] bool DetectPreamble(const Encoding& encoding, int32_t readByteCount);
+    int32_t ReadBuffer();
+    bool DetectPreamble(const Encoding& encoding, int32_t readByteCount);
     void CompressBuffer(int32_t offset);
     void DetectEncoding(int32_t readByteCount);
-    [[nodiscard]] std::vector<std::byte>& GetByteBuffer();
-    [[nodiscard]] std::vector<char16_t>& GetCharBuffer();
+    std::vector<std::byte>& GetByteBuffer();
+    std::vector<char16_t>& GetCharBuffer();
 
 private:
     std::shared_ptr<Stream> _stream;

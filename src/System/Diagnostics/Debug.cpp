@@ -15,6 +15,16 @@ void Debug::Assert(bool condition, std::u16string_view message)
     Assert(condition, message, {u"", 0});
 }
 
+void Debug::Assert(bool condition, std::u16string_view message, std::u16string_view detailMessage)
+{
+#if defined(_DEBUG) || !defined(NDEBUG)
+    if (condition)
+        return;
+
+    Fail(message, detailMessage);
+#endif
+}
+
 void Debug::Fail(std::u16string_view message)
 {
     Fail(message, {u"", 0});
@@ -23,12 +33,12 @@ void Debug::Fail(std::u16string_view message)
 void Debug::Fail(std::u16string_view message, std::u16string_view detailMessage)
 {
 #if defined(_DEBUG) || !defined(NDEBUG)
-    const auto str = fmt::format(u"---- DEBUG ASSERTION FAILED ----\n---- Assert Short Message ----\n{0}\n---- Assert Long Message ----\n{1}\n", message, detailMessage);
+    auto str = fmt::format(u"---- DEBUG ASSERTION FAILED ----\n---- Assert Short Message ----\n{0}\n---- Assert Long Message ----\n{1}\n", message, detailMessage);
 
     std::lock_guard lock(_mutex);
 
     // Ignore the indent when printing the failure message.
-    const auto prevIndentLevel = _indentLevel;
+    auto prevIndentLevel = _indentLevel;
     _indentLevel = 0;
     {
         Write(str);

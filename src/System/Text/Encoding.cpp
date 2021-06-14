@@ -29,9 +29,7 @@ constexpr int32_t GetCCSID(std::u16string_view strippedEncodingName) noexcept
     auto hash = [](std::u16string_view str) constexpr noexcept -> size_t {
         size_t hashValue = 0;
         for (char16_t c : str)
-        {
             hashValue = 65599 * hashValue + c;
-        }
 
         return hashValue ^ (hashValue >> 16);
     };
@@ -266,63 +264,61 @@ constexpr int32_t GetCCSID(std::u16string_view strippedEncodingName) noexcept
 
 constexpr gsl::span<const std::byte> GetByteOrderMark(int32_t codePage) noexcept
 {
-    constexpr std::string_view utf8ByteOrderMark("\xef\xbb\xbf", 3);
-    constexpr std::string_view utf16LEByteOrderMark("\xff\xfe", 2);
-    constexpr std::string_view utf16BEByteOrderMark("\xfe\xff", 2);
-    constexpr std::string_view utf32ByteOrderMark("\xff\xfe\x0\x0", 4);
+    constexpr std::byte utf8ByteOrderMark[] = {std::byte('\xef'), std::byte('\xbb'), std::byte('\xbf')};
+    constexpr std::byte utf16LEByteOrderMark[] = {std::byte('\xff'), std::byte('\xfe')};
+    constexpr std::byte utf16BEByteOrderMark[] = {std::byte('\xfe'), std::byte('\xff')};
+    constexpr std::byte utf32ByteOrderMark[] = {std::byte('\xff'), std::byte('\xfe'), std::byte(0), std::byte(0)};
 
     switch (codePage)
     {
     case CCSID::UTF8:
-        return {reinterpret_cast<const std::byte*>(utf8ByteOrderMark.data()), utf8ByteOrderMark.size()};
+        return {utf8ByteOrderMark, std::extent_v<decltype(utf8ByteOrderMark)>};
 
     case CCSID::UTF16:
     case CCSID::UTF16LE:
-        return {reinterpret_cast<const std::byte*>(utf16LEByteOrderMark.data()), utf16LEByteOrderMark.size()};
+        return {utf16LEByteOrderMark, std::extent_v<decltype(utf16LEByteOrderMark)>};
 
     case CCSID::UTF16BE:
-        return {reinterpret_cast<const std::byte*>(utf16BEByteOrderMark.data()), utf16BEByteOrderMark.size()};
+        return {utf16BEByteOrderMark, std::extent_v<decltype(utf16BEByteOrderMark)>};
 
     case CCSID::UTF32:
-        return {reinterpret_cast<const std::byte*>(utf32ByteOrderMark.data()), utf32ByteOrderMark.size()};
+        return {utf32ByteOrderMark, std::extent_v<decltype(utf32ByteOrderMark)>};
 
     default:
         return {};
     }
 }
 
+std::pair<std::array<char16_t, UCNV_MAX_CONVERTER_NAME_LENGTH>, size_t> GetStrippedName(std::u16string_view name) noexcept
+{
+    std::array<char16_t, UCNV_MAX_CONVERTER_NAME_LENGTH> strippedName{};
+    size_t len = 0;
+
+    for (auto c : name)
+    {
+        if (isalpha(c))
+            c = tolower(c);
+        else if (!isdigit(c))
+            continue;
+
+        strippedName[len++] = c;
+    }
+
+    return {strippedName, len};
+}
+
 }
 
 Encoding::Encoding(UConverter* converter) :
-    _converter(converter),
+    _converter(converter, ucnv_close),
     _encodingName(GetUnicodeEncodingName(converter)),
     _preamble(detail::encoding::GetByteOrderMark(GetCodePage()))
 {
-    this->SetDefaultFallback();
-}
-
-Encoding::Encoding(Encoding&& rhs) noexcept :
-    _converter(rhs._converter),
-    _encodingName(std::move(rhs._encodingName)),
-    _preamble(rhs._preamble)
-{
-    rhs._converter = nullptr;
+    SetDefaultFallback();
 }
 
 Encoding::~Encoding()
 {
-    ucnv_close(_converter);
-    _converter = nullptr;
-}
-
-Encoding& Encoding::operator=(Encoding&& rhs) noexcept
-{
-    std::swap(_converter, rhs._converter);
-    std::swap(_encodingName, rhs._encodingName);
-
-    _preamble = rhs._preamble;
-
-    return *this;
 }
 
 bool Encoding::operator==(const Encoding& rhs) const noexcept
@@ -338,10 +334,8 @@ bool Encoding::operator!=(const Encoding& rhs) const noexcept
 std::optional<Encoding> Encoding::Create(int32_t codePage)
 {
     auto converter = CreateUConverter(codePage);
-    if (converter == nullptr)
-    {
+    if (!converter)
         return {};
-    }
 
     return Encoding(converter);
 }
@@ -349,10 +343,8 @@ std::optional<Encoding> Encoding::Create(int32_t codePage)
 std::optional<Encoding> Encoding::Create(std::u16string_view encodingName)
 {
     auto converter = CreateUConverter(encodingName);
-    if (converter == nullptr)
-    {
+    if (!converter)
         return {};
-    }
 
     return Encoding(converter);
 }
@@ -361,43 +353,37 @@ const Encoding* Encoding::GetEncoding(int32_t codePage)
 {
     auto it = _encodingTable.find(codePage);
     if (it != _encodingTable.cend())
-    {
         return &it->second;
-    }
 
     auto encoding = Encoding::Create(codePage);
     if (!encoding)
-    {
         return nullptr;
-    }
 
     return &_encodingTable.insert(it, {codePage, std::move(encoding.value())})->second;
 }
 
 const Encoding* Encoding::GetEncoding(std::u16string_view encodingName)
 {
+    using namespace detail::encoding;
+
     auto strippedEncodingName = GetStrippedName(encodingName);
-    return GetEncoding(detail::encoding::GetCCSID({strippedEncodingName.first.data(), strippedEncodingName.second}));
+    return GetEncoding(GetCCSID({strippedEncodingName.first.data(), strippedEncodingName.second}));
 }
 
 std::optional<std::vector<std::byte>> Encoding::Convert(const Encoding& srcEncoding, const Encoding& destEncoding, const std::byte* bytes, int32_t count)
 {
     auto status = U_ZERO_ERROR;
-    const icu::UnicodeString str(reinterpret_cast<const char*>(bytes), count, srcEncoding._converter, status);
+    auto str = icu::UnicodeString(reinterpret_cast<const char*>(bytes), count, srcEncoding._converter.get(), status);
     if (U_FAILURE(status))
-    {
         return {};
-    }
 
-    const auto encodedStrByteCount = str.extract(nullptr, 0, destEncoding._converter, status);
+    auto encodedStrByteCount = str.extract(nullptr, 0, destEncoding._converter.get(), status);
     if (encodedStrByteCount == 0)
-    {
         return {};
-    }
 
     std::vector<std::byte> ret(encodedStrByteCount);
     status = U_ZERO_ERROR;
-    str.extract(reinterpret_cast<char*>(&ret[0]), static_cast<int32_t>(ret.size()), destEncoding._converter, status);
+    str.extract(reinterpret_cast<char*>(&ret[0]), int32_t(ret.size()), destEncoding._converter.get(), status);
 
     return ret;
 }
@@ -410,48 +396,45 @@ std::optional<std::vector<std::byte>> Encoding::Convert(const Encoding& srcEncod
 std::optional<int32_t> Encoding::Convert(const Encoding& srcEncoding, const Encoding& destEncoding, const std::byte* srcBytes, int32_t srcByteCount, std::byte* destBytes, int32_t destByteCount)
 {
     auto status = U_ZERO_ERROR;
-    const icu::UnicodeString str(reinterpret_cast<const char*>(srcBytes), srcByteCount, srcEncoding._converter, status);
+    auto str = icu::UnicodeString(reinterpret_cast<const char*>(srcBytes), srcByteCount, srcEncoding._converter.get(), status);
     if (U_FAILURE(status))
     {
         if (destByteCount >= destEncoding.GetMinCharByte())
-        {
             memset(destBytes, 0, destEncoding.GetMinCharByte());
-        }
+
         return {};
     }
 
-    const auto encodedStrByteCount = str.extract(nullptr, 0, destEncoding._converter, status);
+    auto encodedStrByteCount = str.extract(nullptr, 0, destEncoding._converter.get(), status);
     if (encodedStrByteCount > destByteCount || encodedStrByteCount == 0)
     {
         if (destByteCount >= destEncoding.GetMinCharByte())
-        {
             memset(destBytes, 0, destEncoding.GetMinCharByte());
-        }
+
         return {};
     }
 
     status = U_ZERO_ERROR;
-    str.extract(reinterpret_cast<char*>(destBytes), destByteCount, destEncoding._converter, status);
+    str.extract(reinterpret_cast<char*>(destBytes), destByteCount, destEncoding._converter.get(), status);
 
     return encodedStrByteCount;
 }
 
 std::optional<int32_t> Encoding::Convert(const Encoding& srcEncoding, const Encoding& destEncoding, gsl::span<const std::byte> srcBytes, gsl::span<std::byte> destBytes)
 {
-    return Convert(srcEncoding, destEncoding, &srcBytes[0], static_cast<int32_t>(srcBytes.size()),
-       &destBytes[0], static_cast<int32_t>(destBytes.size()));
+    return Convert(srcEncoding, destEncoding, &srcBytes[0], srcBytes.size(), &destBytes[0], destBytes.size());
 }
 
 void Encoding::SetEncoderFallback(EncoderFallback fallback)
 {
     auto status = U_ZERO_ERROR;
-    ucnv_setFromUCallBack(_converter, fallback.callback, fallback.context, nullptr, nullptr, &status);
+    ucnv_setFromUCallBack(_converter.get(), fallback.callback, fallback.context, nullptr, nullptr, &status);
 }
 
 void Encoding::SetDecoderFallback(DecoderFallback fallback)
 {
     auto status = U_ZERO_ERROR;
-    ucnv_setToUCallBack(_converter, fallback.callback, fallback.context, nullptr, nullptr, &status);
+    ucnv_setToUCallBack(_converter.get(), fallback.callback, fallback.context, nullptr, nullptr, &status);
 }
 
 std::optional<std::vector<char32_t>> Encoding::GetChars(const std::byte* bytes, int32_t count) const
@@ -459,20 +442,16 @@ std::optional<std::vector<char32_t>> Encoding::GetChars(const std::byte* bytes, 
     std::vector<char32_t> ret;
 
     auto status = U_ZERO_ERROR;
-    const auto* currentIt = reinterpret_cast<const char*>(bytes);
-    const auto* endIt = reinterpret_cast<const char*>(bytes + count);
+    auto currentIt = reinterpret_cast<const char*>(bytes);
+    auto endIt = reinterpret_cast<const char*>(bytes + count);
     while (currentIt < endIt)
     {
-        const auto c = ucnv_getNextUChar(_converter, &currentIt, currentIt + count, &status);
+        auto c = ucnv_getNextUChar(_converter.get(), &currentIt, currentIt + count, &status);
         if (U_FAILURE(status))
-        {
             return {};
-        }
 
         if (c == 0)
-        {
             break;
-        }
 
         ret.push_back(static_cast<char32_t>(c));
     }
@@ -485,23 +464,19 @@ std::optional<std::vector<char32_t>> Encoding::GetChars(gsl::span<const std::byt
     return GetChars(bytes.data(), static_cast<int32_t>(bytes.size()));
 }
 
-std::optional<String> Encoding::GetString(const std::byte* bytes, int32_t count) const
+std::optional<std::u16string> Encoding::GetString(const std::byte* bytes, int32_t count) const
 {
-    if (this->GetCodePage() == Unicode().GetCodePage())
-    {
-        return String(reinterpret_cast<const char16_t*>(bytes), count / 2);
-    }
+    if (GetCodePage() == Unicode().GetCodePage())
+        return std::u16string(reinterpret_cast<const char16_t*>(bytes), count / 2);
 
     auto convertedBytes = Convert(*this, Unicode(), bytes, count);
     if (convertedBytes)
-    {
-        return String(reinterpret_cast<const char16_t*>(convertedBytes->data()), convertedBytes->size() / 2);
-    }
+        return std::u16string(reinterpret_cast<const char16_t*>(convertedBytes->data()), convertedBytes->size() / 2);
 
     return {};
 }
 
-std::optional<String> Encoding::GetString(gsl::span<const std::byte> bytes) const
+std::optional<std::u16string> Encoding::GetString(gsl::span<const std::byte> bytes) const
 {
     return GetString(bytes.data(), bytes.size());
 }
@@ -516,20 +491,16 @@ std::optional<int32_t> Encoding::GetCharCount(const std::byte* bytes, int32_t co
     int32_t ret = 0;
 
     auto status = U_ZERO_ERROR;
-    const auto* currentIt = reinterpret_cast<const char*>(&bytes[0]);
-    const auto* endIt = reinterpret_cast<const char*>(bytes + count);
+    auto currentIt = reinterpret_cast<const char*>(&bytes[0]);
+    auto endIt = reinterpret_cast<const char*>(bytes + count);
     while (currentIt < endIt)
     {
-        const auto c = ucnv_getNextUChar(_converter, &currentIt, currentIt + count, &status);
+        auto c = ucnv_getNextUChar(_converter.get(), &currentIt, currentIt + count, &status);
         if (U_FAILURE(status))
-        {
             return {};
-        }
 
         if (c == UChar32{})
-        {
             break;
-        }
 
         ++ret;
     }
@@ -550,7 +521,7 @@ std::u16string_view Encoding::GetEncodingName() const noexcept
 EncoderFallback Encoding::GetEncoderFallback() const noexcept
 {
     EncoderFallback fallback{};
-    ucnv_getFromUCallBack(_converter, &fallback.callback, &fallback.context);
+    ucnv_getFromUCallBack(_converter.get(), &fallback.callback, &fallback.context);
 
     return fallback;
 }
@@ -558,7 +529,7 @@ EncoderFallback Encoding::GetEncoderFallback() const noexcept
 DecoderFallback Encoding::GetDecoderFallback() const noexcept
 {
     DecoderFallback fallback{};
-    ucnv_getToUCallBack(_converter, &fallback.callback, &fallback.context);
+    ucnv_getToUCallBack(_converter.get(), &fallback.callback, &fallback.context);
 
     return fallback;
 }
@@ -566,7 +537,7 @@ DecoderFallback Encoding::GetDecoderFallback() const noexcept
 int32_t Encoding::GetCodePage() const noexcept
 {
     auto errorCode = U_ZERO_ERROR;
-    return ucnv_getCCSID(_converter, &errorCode);
+    return ucnv_getCCSID(_converter.get(), &errorCode);
 }
 
 int32_t Encoding::GetHashCode() const noexcept
@@ -611,17 +582,15 @@ const Encoding& Encoding::UTF32() noexcept
 
 bool Encoding::IsSingleByte() const noexcept
 {
-    return this->GetMinCharByte() == 1 && this->GetMaxCharByte() == 1;
+    return GetMinCharByte() == 1 && GetMaxCharByte() == 1;
 }
 
 UConverter* Encoding::CreateUConverter(std::u16string_view encodingName)
 {
     auto status = U_ZERO_ERROR;
-    auto* converter = ucnv_openU(encodingName.data(), &status);
+    auto converter = ucnv_openU(encodingName.data(), &status);
     if (U_FAILURE(status))
-    {
         return nullptr;
-    }
 
     return converter;
 }
@@ -629,64 +598,40 @@ UConverter* Encoding::CreateUConverter(std::u16string_view encodingName)
 UConverter* Encoding::CreateUConverter(int32_t codePage)
 {
     auto status = U_ZERO_ERROR;
-    auto* converter = ucnv_openCCSID(codePage, UCNV_IBM, &status);
+    auto converter = ucnv_openCCSID(codePage, UCNV_IBM, &status);
     if (U_FAILURE(status))
-    {
         return nullptr;
-    }
 
     return converter;
 }
 
-String Encoding::GetUnicodeEncodingName(UConverter* converter)
+std::u16string Encoding::GetUnicodeEncodingName(UConverter* converter)
 {
     auto status = U_ZERO_ERROR;
-    const auto beginIt = ucnv_getName(converter, &status);
-    const auto endIt = beginIt + strlen(beginIt);
+    auto beginIt = ucnv_getName(converter, &status);
+    auto endIt = beginIt + strlen(beginIt);
 
     std::array<char16_t, UCNV_MAX_CONVERTER_NAME_LENGTH> newEncodingName{};
     std::copy(beginIt, endIt, newEncodingName.begin());
 
-    return String(std::u16string_view(newEncodingName.data(), endIt - beginIt));
+    return std::u16string(newEncodingName.data(), endIt - beginIt);
 }
 
 int32_t Encoding::GetMinCharByte() const noexcept
 {
-    return ucnv_getMinCharSize(_converter);
+    return ucnv_getMinCharSize(_converter.get());
 }
 
 int32_t Encoding::GetMaxCharByte() const noexcept
 {
-    return ucnv_getMaxCharSize(_converter);
-}
-
-std::pair<std::array<char16_t, UCNV_MAX_CONVERTER_NAME_LENGTH>, size_t> Encoding::GetStrippedName(std::u16string_view name) noexcept
-{
-    std::array<char16_t, UCNV_MAX_CONVERTER_NAME_LENGTH> strippedName{};
-    size_t len = 0;
-
-    for (auto c : name)
-    {
-        if (isalpha(c))
-        {
-            c = tolower(c);
-        }
-        else if (!isdigit(c))
-        {
-            continue;
-        }
-
-        strippedName[len++] = c;
-    }
-
-    return {strippedName, len};
+    return ucnv_getMaxCharSize(_converter.get());
 }
 
 void Encoding::SetDefaultFallback() const noexcept
 {
     auto status = U_ZERO_ERROR;
-    ucnv_setToUCallBack(_converter, UCNV_TO_U_CALLBACK_SKIP, nullptr, nullptr, nullptr, &status);
-    ucnv_setFromUCallBack(_converter, UCNV_FROM_U_CALLBACK_STOP, nullptr, nullptr, nullptr, &status);
+    ucnv_setToUCallBack(_converter.get(), UCNV_TO_U_CALLBACK_SKIP, nullptr, nullptr, nullptr, &status);
+    ucnv_setFromUCallBack(_converter.get(), UCNV_FROM_U_CALLBACK_STOP, nullptr, nullptr, nullptr, &status);
 }
 
 CS2CPP_NAMESPACE_END

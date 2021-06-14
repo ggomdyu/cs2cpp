@@ -17,11 +17,10 @@ public:
     StreamWriter(std::shared_ptr<Stream> stream, const Encoding& encoding, int32_t bufferSize, bool leaveOpen) noexcept;
     StreamWriter(const StreamWriter& rhs) = delete;
     StreamWriter(StreamWriter&& rhs) noexcept = default;
+    ~StreamWriter() override = default;
+    
 private:
     StreamWriter(std::shared_ptr<Stream> stream, const Encoding& encoding, int32_t bufferSize, bool leaveOpen, bool haveWrittenPreamble) noexcept;
-
-public:
-    ~StreamWriter() override = default;
 
 public:
     StreamWriter& operator=(const StreamWriter& rhs) = delete;
@@ -29,7 +28,6 @@ public:
 
 public:
     using TextWriter::Write;
-
     [[nodiscard]] static std::optional<StreamWriter> Create(std::u16string_view path);
     [[nodiscard]] static std::optional<StreamWriter> Create(std::u16string_view path, bool append);
     [[nodiscard]] static std::optional<StreamWriter> Create(std::u16string_view path, bool append, const Encoding& encoding);
@@ -41,9 +39,9 @@ public:
     void Close() override;
 
 private:
-    [[nodiscard]] std::vector<char16_t>& GetCharBuffer();
-    [[nodiscard]] std::vector<std::byte>& GetByteBuffer();
-    [[nodiscard]] static std::shared_ptr<Stream> CreateFileStream(std::u16string_view path, bool append);
+    std::vector<char16_t>& GetCharBuffer();
+    std::vector<std::byte>& GetByteBuffer();
+    static std::shared_ptr<Stream> CreateFileStream(std::u16string_view path, bool append);
 
 private:
     std::shared_ptr<Stream> _stream;

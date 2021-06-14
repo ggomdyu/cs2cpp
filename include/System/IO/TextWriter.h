@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fmt/format.h>
+
 #include "System/Text/Encoding.h"
 
 CS2CPP_NAMESPACE_BEGIN

@@ -19,7 +19,7 @@ if(WIN32)
     set(CS2CPP_PLATFORM "Windows" CACHE STRING "")
 elseif(APPLE)
     set(CS2CPP_PLATFORM "MacOS" CACHE STRING "")
-    set(CMAKE_CXX_FLAGS "-x objective-c++")
+    set(CMAKE_CXX_FLAGS "-fobjc-abi-version=2 -fobjc-arc")
 else()
     message(FATAL_ERROR "Your platform is not supported.")
 endif()
@@ -80,10 +80,10 @@ endfunction()
 
 function(init_compile_definitions)
     target_compile_definitions(cs2cpp PUBLIC
-        # Disable exception on fmt.
+        # Disable exception on fmt
         FMT_EXCEPTIONS=0
 
-        # Add UNICODE, _UNICODE if the target platform is Windows.
+        # Add UNICODE, _UNICODE if the target platform is Windows
         $<$<STREQUAL:$<UPPER_CASE:"${CS2CPP_PLATFORM}">,"WINDOWS">:
             -DUNICODE
             -D_UNICODE
@@ -91,21 +91,21 @@ function(init_compile_definitions)
             -DNOMINMAX
         >
 
-        # Add namespace support macro.
+        # Add namespace support macro
         $<IF:$<BOOL:${CS2CPP_ENABLE_NAMESPACE}>, CS2CPP_NAMESPACE=${CS2CPP_NAMESPACE_NAME},>
         $<IF:$<BOOL:${CS2CPP_ENABLE_NAMESPACE}>, CS2CPP_NAMESPACE_BEGIN=namespace\t${CS2CPP_NAMESPACE_NAME}{,>
         $<IF:$<BOOL:${CS2CPP_ENABLE_NAMESPACE}>, CS2CPP_NAMESPACE_END=},>
 
-        # Add platform identifier macro.
+        # Add platform identifier macro
         $<UPPER_CASE:CS2CPP_PLATFORM_${CS2CPP_PLATFORM}>=1
 
-        # Add SIMD support macro.
+        # Add SIMD support macro
         CS2CPP_ENABLE_SIMD=$<BOOL:${CS2CPP_ENABLE_SIMD}>
         CS2CPP_SUPPORT_SIMD=$<BOOL:${CS2CPP_SUPPORT_SIMD}>
         $<IF:$<BOOL:${CS2CPP_SUPPORT_SSE2}>, CS2CPP_SIMD_SSE2=1,
         $<IF:$<BOOL:${CS2CPP_SUPPORT_NEON}>, CS2CPP_SIMD_NEON=1,>>
 
-        # Add POSIX support macro.
+        # Add POSIX support macro
         CS2CPP_SUPPORT_POSIX=$<BOOL:${CS2CPP_SUPPORT_POSIX}>
     )
 endfunction()

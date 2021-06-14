@@ -7,53 +7,57 @@ CS2CPP_NAMESPACE_BEGIN
 template <typename>
 struct FunctionTraits;
 
-template <typename _Return, typename... _Types>
-struct FunctionTraits<_Return(_Types...)>
+template <typename R, typename... Ts>
+struct FunctionTraits<R(Ts...)>
 {
 public:
-    using Return = _Return;
-    using Function = _Return(_Types...);
+    using Return = R;
+    using Function = R(Ts...);
 
 public:
     static constexpr bool IsMemberFunction = false;
     static constexpr bool IsFunctor = false;
-    static constexpr size_t ArgumentCount = sizeof...(_Types);
+    static constexpr size_t ArgumentCount = sizeof...(Ts);
 };
 
-template <typename _Return, typename... _Types>
-struct FunctionTraits<_Return (*)(_Types...)> : FunctionTraits<_Return(_Types...)>
+template <typename R, typename... Ts>
+struct FunctionTraits<R (*)(Ts...)> :
+    FunctionTraits<R(Ts...)>
 {
 };
 
-template <typename _Return, typename _Class, typename... _Types>
-struct FunctionTraits<_Return (_Class::*)(_Types...)> :
-    FunctionTraits<std::remove_cv_t<_Return(_Types...)>>
+template <typename R, typename C, typename... Ts>
+struct FunctionTraits<R (C::*)(Ts...)> :
+    FunctionTraits<std::remove_cv_t<R(Ts...)>>
 {
 public:
-    using Class = _Class;
+    using Class = C;
 
 public:
     static constexpr bool IsMemberFunction = true;
 };
 
-template <typename _Return, typename _Class, typename... _Types>
-struct FunctionTraits<_Return (_Class::*)(_Types...) const> : FunctionTraits<_Return (_Class::*)(_Types...)>
+template <typename R, typename C, typename... Ts>
+struct FunctionTraits<R (C::*)(Ts...) const> :
+    FunctionTraits<R (C::*)(Ts...)>
 {
 };
 
-template <typename _Return, typename _Class, typename... _Types>
-struct FunctionTraits<_Return (_Class::*)(_Types...) volatile> : FunctionTraits<_Return (_Class::*)(_Types...)>
+template <typename R, typename C, typename... Ts>
+struct FunctionTraits<R (C::*)(Ts...) volatile> :
+    FunctionTraits<R (C::*)(Ts...)>
 {
 };
 
-template <typename _Return, typename _Class, typename... _Types>
-struct FunctionTraits<_Return (_Class::*)(_Types...) const volatile> : FunctionTraits<_Return (_Class::*)(_Types...)>
+template <typename R, typename C, typename... Ts>
+struct FunctionTraits<R (C::*)(Ts...) const volatile> :
+    FunctionTraits<R (C::*)(Ts...)>
 {
 };
 
-template <typename _Function>
+template <typename F>
 struct FunctionTraits :
-    FunctionTraits<decltype(&_Function::operator())>
+    FunctionTraits<decltype(&F::operator())>
 {
 public:
     static constexpr bool IsFunctor = true;

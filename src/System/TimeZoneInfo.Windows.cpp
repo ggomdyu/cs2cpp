@@ -6,15 +6,16 @@ CS2CPP_NAMESPACE_BEGIN
 TimeZoneInfo TimeZoneInfo::CreateLocal()
 {
     DYNAMIC_TIME_ZONE_INFORMATION tzi;
-    const auto isSupportDaylightSavingTime = GetDynamicTimeZoneInformation(&tzi) != TIME_ZONE_ID_UNKNOWN;
 
-    const TimeSpan baseUtcOffset(TimeSpan::TicksPerMinute * -tzi.Bias);
+    auto isSupportDaylightSavingTime = GetDynamicTimeZoneInformation(&tzi) != TIME_ZONE_ID_UNKNOWN;
+    auto baseUtcOffset = TimeSpan(TimeSpan::TicksPerMinute * -tzi.Bias);
 
-    const auto id = reinterpret_cast<const char16_t*>(tzi.TimeZoneKeyName);
-    const auto standardName = reinterpret_cast<const char16_t*>(tzi.StandardName);
-    const auto daylightDisplayName = reinterpret_cast<const char16_t*>(tzi.DaylightName);
+    auto id = String(reinterpret_cast<const char16_t*>(tzi.TimeZoneKeyName))
+    auto standardName = String(reinterpret_cast<const char16_t*>(tzi.StandardName));
+    auto daylightDisplayName = String(reinterpret_cast<const char16_t*>(tzi.DaylightName);
 
-    return TimeZoneInfo(id, baseUtcOffset, standardName, standardName, daylightDisplayName, isSupportDaylightSavingTime);
+    return TimeZoneInfo(std::move(id), baseUtcOffset, standardName, standardName, std::move(daylightDisplayName),
+        isSupportDaylightSavingTime);
 }
 
 CS2CPP_NAMESPACE_END

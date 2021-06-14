@@ -1,6 +1,7 @@
 #pragma once
 
-#include "System/String.h"
+#include <gsl/span>
+#include <string>
 
 #if CS2CPP_PLATFORM_WINDOWS
 #    include "Path.Windows.h"
@@ -13,31 +14,33 @@ CS2CPP_NAMESPACE_BEGIN
 class Path :
     private PlatformPath
 {
+    friend class Directory;
+
 public:
     Path() = delete;
 
 public:
-    [[nodiscard]] static String Combine(std::u16string_view path1, std::u16string_view path2);
+    [[nodiscard]] static std::u16string Combine(std::u16string_view path1, std::u16string_view path2);
     [[nodiscard]] static constexpr bool IsPathRooted(std::u16string_view path) noexcept;
     [[nodiscard]] static constexpr std::u16string_view GetExtension(std::u16string_view path) noexcept;
     [[nodiscard]] static constexpr std::u16string_view GetFileName(std::u16string_view path) noexcept;
     [[nodiscard]] static constexpr std::u16string_view GetFileNameWithoutExtension(std::u16string_view path) noexcept;
     [[nodiscard]] static constexpr std::u16string_view GetDirectoryName(std::u16string_view path) noexcept;
     [[nodiscard]] static constexpr bool HasExtension(std::u16string_view path) noexcept;
-    [[nodiscard]] static String ChangeExtension(std::u16string_view path, std::u16string_view extension);
-    [[nodiscard]] static String GetFullPath(std::u16string_view path);
-    [[nodiscard]] static String GetFullPath(std::u16string_view path, std::u16string_view basePath);
+    [[nodiscard]] static std::u16string ChangeExtension(std::u16string_view path, std::u16string_view extension);
+    [[nodiscard]] static std::u16string GetFullPath(std::u16string_view path);
+    [[nodiscard]] static std::u16string GetFullPath(std::u16string_view path, std::u16string_view basePath);
     [[nodiscard]] static constexpr std::u16string_view GetPathRoot(std::u16string_view path) noexcept;
-    [[nodiscard]] static String GetRandomFileName();
-    [[nodiscard]] static String GetTempPath();
+    [[nodiscard]] static std::u16string GetRandomFileName();
+    [[nodiscard]] static std::u16string GetTempPath();
     [[nodiscard]] static constexpr gsl::span<const char16_t> GetInvalidFileNameChars() noexcept;
     [[nodiscard]] static constexpr gsl::span<const char16_t> GetInvalidPathChars() noexcept;
-    [[nodiscard]] static constexpr int32_t GetRootLength(std::u16string_view path) noexcept;
-    [[nodiscard]] static constexpr bool IsDirectorySeparator(char16_t c) noexcept;
 
 private:
+    static constexpr int32_t GetRootLength(std::u16string_view path) noexcept;
+    static constexpr bool IsDirectorySeparator(char16_t c) noexcept;
     static constexpr bool IsValidDriveChar(char16_t c) noexcept;
-    static String RemoveRelativeSegments(std::u16string_view path);
+    static std::u16string RemoveRelativeSegments(std::u16string_view path);
 
 public:
     static constexpr char16_t AltDirectorySeparatorChar = PlatformPath::AltDirectorySeparatorChar;
@@ -62,9 +65,7 @@ constexpr std::u16string_view Path::GetExtension(std::u16string_view path) noexc
     while (index-- > 0)
     {
         if (path[index] == '.')
-        {
             return path.substr(index);
-        }
     }
 
     return {};
@@ -75,10 +76,8 @@ constexpr std::u16string_view Path::GetFileName(std::u16string_view path) noexce
     auto index = path.length();
     while (index-- > 0)
     {
-        if (path[index] == AltDirectorySeparatorChar || path[index] == DirectorySeparatorChar)
-        {
+        if (IsDirectorySeparator(path[index]))
             return path.substr(index + 1, path.length() - index);
-        }
     }
 
     return path;
@@ -92,18 +91,13 @@ constexpr std::u16string_view Path::GetFileNameWithoutExtension(std::u16string_v
     while (index-- > 0)
     {
         if (IsDirectorySeparator(path[index]))
-        {
             return path.substr(index + 1, extensionStartIndex - (index + 1));
-        }
+
         if (index == 0)
-        {
             return path.substr(0, extensionStartIndex);
-        }
 
         if (path[index] == '.' && (extensionStartIndex == path.length()))
-        {
             extensionStartIndex = index;
-        }
     }
 
     return path;
@@ -114,10 +108,8 @@ constexpr std::u16string_view Path::GetDirectoryName(std::u16string_view path) n
     auto index = path.length();
     while (index-- > 0)
     {
-        if (path[index] == AltDirectorySeparatorChar || path[index] == DirectorySeparatorChar)
-        {
+        if (IsDirectorySeparator(path[index]))
             return path.substr(0, index);
-        }
     }
 
     return {};
@@ -129,9 +121,7 @@ constexpr bool Path::HasExtension(std::u16string_view path) noexcept
     while (index-- > 0)
     {
         if (path[index] == u'.')
-        {
             return path.length() > (index + 1);
-        }
     }
 
     return false;

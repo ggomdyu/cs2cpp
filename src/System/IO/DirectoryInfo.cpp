@@ -8,7 +8,7 @@ DirectoryInfo::DirectoryInfo(std::u16string_view path) :
 {
 }
 
-DirectoryInfo::DirectoryInfo(String path, FullPathTag) :
+DirectoryInfo::DirectoryInfo(std::u16string path, FullPathTag) :
     _fullPath(std::move(path))
 {
 }
@@ -33,43 +33,43 @@ DirectoryInfo DirectoryInfo::GetRoot() const
     return DirectoryInfo(Directory::GetDirectoryRoot(_fullPath), FullPathTag{});
 }
 
-std::vector<String> DirectoryInfo::GetDirectories(std::u16string_view searchPattern, SearchOption searchOption) const
+std::vector<std::u16string> DirectoryInfo::GetDirectories(std::u16string_view searchPattern, SearchOption searchOption) const
 {
     return Directory::GetDirectories(&_fullPath[0], searchPattern, searchOption);
 }
 
-std::vector<String> DirectoryInfo::GetFiles(std::u16string_view searchPattern, SearchOption searchOption) const
+std::vector<std::u16string> DirectoryInfo::GetFiles(std::u16string_view searchPattern, SearchOption searchOption) const
 {
     return Directory::GetFiles(&_fullPath[0], searchPattern, searchOption);
 }
 
-std::vector<String> DirectoryInfo::GetFileSystemEntries(std::u16string_view searchPattern, SearchOption searchOption) const
+std::vector<std::u16string> DirectoryInfo::GetFileSystemEntries(std::u16string_view searchPattern, SearchOption searchOption) const
 {
     return Directory::GetFileSystemEntries(&_fullPath[0], searchPattern, searchOption);
 }
 
-void DirectoryInfo::Create() const
+void DirectoryInfo::Create()
 {
     Directory::CreateDirectory(&_fullPath[0]);
 }
 
 DirectoryInfo DirectoryInfo::CreateSubdirectory(std::u16string_view path) const
 {
-    const auto combinedPath = Path::Combine(_fullPath, path);
+    auto combinedPath = Path::Combine(_fullPath, path);
     return Directory::CreateDirectory(combinedPath);
 }
 
-bool DirectoryInfo::MoveTo(std::u16string_view destDirName) const
+bool DirectoryInfo::MoveTo(std::u16string_view destDirName)
 {
     return Directory::Move(&_fullPath[0], destDirName);
 }
 
-bool DirectoryInfo::Delete(bool recursive) const
+bool DirectoryInfo::Delete(bool recursive)
 {
     return Directory::Delete(&_fullPath[0], recursive);
 }
 
-const String& DirectoryInfo::ToString() const noexcept
+const std::u16string& DirectoryInfo::ToString() const noexcept
 {
     return _fullPath;
 }

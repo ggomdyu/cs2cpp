@@ -86,10 +86,10 @@ public:
     [[nodiscard]] int64_t ToFileTimeUtc() const;
 
 private:
-    [[nodiscard]] static constexpr int64_t DateToTicks(int32_t year, int32_t month, int32_t day) noexcept;
-    [[nodiscard]] static constexpr int64_t TimeToTicks(int32_t hour, int32_t minute, int32_t second) noexcept;
-    [[nodiscard]] constexpr int32_t GetDatePart(int32_t part) const noexcept;
-    [[nodiscard]] static int64_t GetTimeSinceUnixEpoch();
+    static constexpr int64_t DateToTicks(int32_t year, int32_t month, int32_t day) noexcept;
+    static constexpr int64_t TimeToTicks(int32_t hour, int32_t minute, int32_t second) noexcept;
+    constexpr int32_t GetDatePart(int32_t part) const noexcept;
+    static int64_t GetTimeSinceUnixEpoch();
 
 private:
     static constexpr int64_t TicksMask = 0x3FFFFFFFFFFFFFFF;
@@ -143,17 +143,17 @@ constexpr DateTime::DateTime(uint64_t ticks) noexcept :
 
 constexpr DateTime DateTime::operator+(TimeSpan rhs) const noexcept
 {
-    return DateTime(this->GetTicks() + rhs.GetTicks(), this->GetKind());
+    return DateTime(GetTicks() + rhs.GetTicks(), GetKind());
 }
 
 constexpr TimeSpan DateTime::operator-(DateTime rhs) const noexcept
 {
-    return TimeSpan(this->GetTicks() - rhs.GetTicks());
+    return TimeSpan(GetTicks() - rhs.GetTicks());
 }
 
 constexpr DateTime DateTime::operator-(TimeSpan rhs) const noexcept
 {
-    return DateTime(this->GetTicks() - rhs.GetTicks(), this->GetKind());
+    return DateTime(GetTicks() - rhs.GetTicks(), GetKind());
 }
 
 inline DateTime& DateTime::operator+=(TimeSpan rhs) noexcept
@@ -170,32 +170,32 @@ inline DateTime& DateTime::operator-=(TimeSpan rhs) noexcept
 
 constexpr bool DateTime::operator==(DateTime rhs) const noexcept
 {
-    return this->GetTicks() == rhs.GetTicks();
+    return GetTicks() == rhs.GetTicks();
 }
 
 constexpr bool DateTime::operator!=(DateTime rhs) const noexcept
 {
-    return this->GetTicks() != rhs.GetTicks();
+    return GetTicks() != rhs.GetTicks();
 }
 
 constexpr bool DateTime::operator>(DateTime rhs) const noexcept
 {
-    return this->GetTicks() > rhs.GetTicks();
+    return GetTicks() > rhs.GetTicks();
 }
 
 constexpr bool DateTime::operator>=(DateTime rhs) const noexcept
 {
-    return this->GetTicks() >= rhs.GetTicks();
+    return GetTicks() >= rhs.GetTicks();
 }
 
 constexpr bool DateTime::operator<(DateTime rhs) const noexcept
 {
-    return this->GetTicks() < rhs.GetTicks();
+    return GetTicks() < rhs.GetTicks();
 }
 
 constexpr bool DateTime::operator<=(DateTime rhs) const noexcept
 {
-    return this->GetTicks() <= rhs.GetTicks();
+    return GetTicks() <= rhs.GetTicks();
 }
 
 constexpr int32_t DateTime::Compare(DateTime lhs, DateTime rhs) noexcept
@@ -205,15 +205,11 @@ constexpr int32_t DateTime::Compare(DateTime lhs, DateTime rhs) noexcept
 
 constexpr int32_t DateTime::CompareTo(DateTime value) const noexcept
 {
-    if (this->GetTicks() > value.GetTicks())
-    {
+    if (GetTicks() > value.GetTicks())
         return 1;
-    }
 
-    if (this->GetTicks() < value.GetTicks())
-    {
+    if (GetTicks() < value.GetTicks())
         return -1;
-    }
 
     return 0;
 }
@@ -255,9 +251,7 @@ constexpr bool DateTime::IsLeapYear(int32_t year) noexcept
 constexpr int32_t DateTime::DaysInMonth(int32_t year, int32_t month) noexcept
 {
     if (month == 2)
-    {
         return IsLeapYear(year) ? DaysToMonth366[month] - DaysToMonth366[month - 1] : DaysToMonth365[month] - DaysToMonth365[month - 1];
-    }
 
     return DaysToMonth365[month] - DaysToMonth365[month - 1];
 }
@@ -265,19 +259,15 @@ constexpr int32_t DateTime::DaysInMonth(int32_t year, int32_t month) noexcept
 constexpr DateTime DateTime::AddYears(int32_t value) const noexcept
 {
     if (value < -10000 || value > 10000)
-    {
         return DateTime(0);
-    }
 
-    return this->AddMonths(value * 12);
+    return AddMonths(value * 12);
 }
 
 constexpr DateTime DateTime::AddMonths(int32_t value) const noexcept
 {
     if (value < -120000 || value > 120000)
-    {
         return DateTime(0);
-    }
 
     auto year = GetDatePart(DatePartYear);
     auto month = GetDatePart(DatePartMonth);
@@ -294,68 +284,64 @@ constexpr DateTime DateTime::AddMonths(int32_t value) const noexcept
     }
 
     if (year < 1 || year > 9999)
-    {
         return DateTime(0);
-    }
 
     auto day = GetDatePart(DatePartDay);
     const auto days = DaysInMonth(year, month);
     if (day > days)
-    {
         day = days;
-    }
 
-    return DateTime(DateToTicks(year, month, day) + (this->GetTicks() % TimeSpan::TicksPerDay), this->GetKind());
+    return DateTime(DateToTicks(year, month, day) + (GetTicks() % TimeSpan::TicksPerDay), GetKind());
 }
 
 constexpr DateTime DateTime::AddDays(double value) const noexcept
 {
-    return DateTime(this->GetTicks() + static_cast<int64_t>(value * TimeSpan::TicksPerDay), this->GetKind());
+    return DateTime(GetTicks() + static_cast<int64_t>(value * TimeSpan::TicksPerDay), GetKind());
 }
 
 constexpr DateTime DateTime::AddHours(double value) const noexcept
 {
-    return DateTime(this->GetTicks() + static_cast<int64_t>(value * TimeSpan::TicksPerHour), this->GetKind());
+    return DateTime(GetTicks() + static_cast<int64_t>(value * TimeSpan::TicksPerHour), GetKind());
 }
 
 constexpr DateTime DateTime::AddMinutes(double value) const noexcept
 {
-    return DateTime(this->GetTicks() + static_cast<int64_t>(value * TimeSpan::TicksPerMinute), this->GetKind());
+    return DateTime(GetTicks() + static_cast<int64_t>(value * TimeSpan::TicksPerMinute), GetKind());
 }
 
 constexpr DateTime DateTime::AddSeconds(double value) const noexcept
 {
-    return DateTime(this->GetTicks() + static_cast<int64_t>(value * TimeSpan::TicksPerSecond), this->GetKind());
+    return DateTime(GetTicks() + static_cast<int64_t>(value * TimeSpan::TicksPerSecond), GetKind());
 }
 
 constexpr int32_t DateTime::GetYear() const noexcept
 {
-    return this->GetDatePart(DatePartYear);
+    return GetDatePart(DatePartYear);
 }
 
 constexpr int32_t DateTime::GetMonth() const noexcept
 {
-    return this->GetDatePart(DatePartMonth);
+    return GetDatePart(DatePartMonth);
 }
 
 constexpr int32_t DateTime::GetDay() const noexcept
 {
-    return this->GetDatePart(DatePartDay);
+    return GetDatePart(DatePartDay);
 }
 
 constexpr int32_t DateTime::GetHour() const noexcept
 {
-    return (this->GetTicks() / TimeSpan::TicksPerHour) % 24;
+    return (GetTicks() / TimeSpan::TicksPerHour) % 24;
 }
 
 constexpr int32_t DateTime::GetMinute() const noexcept
 {
-    return (this->GetTicks() / TimeSpan::TicksPerMinute) % 60;
+    return (GetTicks() / TimeSpan::TicksPerMinute) % 60;
 }
 
 constexpr int32_t DateTime::GetSecond() const noexcept
 {
-    return (this->GetTicks() / TimeSpan::TicksPerSecond) % 60;
+    return (GetTicks() / TimeSpan::TicksPerSecond) % 60;
 }
 
 constexpr int64_t DateTime::GetTicks() const noexcept
@@ -365,18 +351,18 @@ constexpr int64_t DateTime::GetTicks() const noexcept
 
 constexpr TimeSpan DateTime::GetTimeOfDay() const noexcept
 {
-    return TimeSpan(this->GetTicks() % TimeSpan::TicksPerDay);
+    return TimeSpan(GetTicks() % TimeSpan::TicksPerDay);
 }
 
 constexpr DateTime DateTime::GetDate() const noexcept
 {
-    const auto ticks = this->GetTicks();
-    return DateTime(ticks - (ticks % TimeSpan::TicksPerDay), this->GetKind());
+    const auto ticks = GetTicks();
+    return DateTime(ticks - (ticks % TimeSpan::TicksPerDay), GetKind());
 }
 
 constexpr DayOfWeek DateTime::GetDayOfWeek() const noexcept
 {
-    return DayOfWeek((this->GetTicks() / TimeSpan::TicksPerDay + 1) % 7);
+    return DayOfWeek((GetTicks() / TimeSpan::TicksPerDay + 1) % 7);
 }
 
 constexpr DayOfWeek DateTime::GetDayOfWeek(int32_t year, int32_t month, int32_t day)
@@ -438,24 +424,20 @@ constexpr int64_t DateTime::TimeToTicks(int32_t hour, int32_t minute, int32_t se
 
 constexpr int32_t DateTime::GetDatePart(int32_t part) const noexcept
 {
-    auto n = this->GetTicks() / TimeSpan::TicksPerDay;
+    auto n = GetTicks() / TimeSpan::TicksPerDay;
     const auto y400 = n / DaysPer400Years;
     n -= y400 * DaysPer400Years;
 
     auto y100 = n / DaysPer100Years;
     if (y100 == 4)
-    {
         y100 = 3;
-    }
     n -= y100 * DaysPer100Years;
 
     const auto y4 = n / DaysPer4Years;
     n -= y4 * DaysPer4Years;
     auto y1 = n / DaysPerYear;
     if (y1 == 4)
-    {
         y1 = 3;
-    }
 
     if (part == DatePartYear)
     {
@@ -472,13 +454,10 @@ constexpr int32_t DateTime::GetDatePart(int32_t part) const noexcept
     const auto* days = isLeapYear ? DaysToMonth366 : DaysToMonth365;
     auto m = (n >> 5) + 1;
     while (n >= days[m])
-    {
         ++m;
-    }
+
     if (part == DatePartMonth)
-    {
         return static_cast<int32_t>(m);
-    }
 
     return int32_t(n - days[m - 1] + 1);
 }
@@ -488,14 +467,10 @@ inline int64_t DateTime::GetTimeSinceUnixEpoch()
     auto timeSinceEpoch = std::chrono::system_clock::now().time_since_epoch();
 
     using DurationType = decltype(timeSinceEpoch);
-    if constexpr (DurationType::period::den == 10000000)
-    {
+    if constexpr (DurationType::period::den == 10'000'000)
         return timeSinceEpoch.count();
-    }
     else
-    {
         return std::chrono::duration_cast<std::chrono::duration<int64_t, std::ratio<1, 10000000>>>(timeSinceEpoch).count();
-    }
 }
 
 inline int64_t DateTime::ToFileTime() const
@@ -505,7 +480,7 @@ inline int64_t DateTime::ToFileTime() const
 
 inline int64_t DateTime::ToFileTimeUtc() const
 {
-    return this->ToUniversalTime().GetTicks() - FileTimeOffset;
+    return ToUniversalTime().GetTicks() - FileTimeOffset;
 }
 
 CS2CPP_NAMESPACE_END

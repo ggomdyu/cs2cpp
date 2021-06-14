@@ -1,9 +1,8 @@
 #pragma once
 
 #include <gsl/span>
+#include <string>
 #include <optional>
-
-#include "System/String.h"
 
 CS2CPP_NAMESPACE_BEGIN
 
@@ -17,8 +16,8 @@ public:
     virtual int32_t Read() = 0;
     virtual int32_t Read(gsl::span<char16_t> bytes);
     int32_t Read(char16_t* bytes, int32_t count);
-    virtual std::optional<String> ReadLine();
-    virtual String ReadToEnd();
+    [[nodiscard]] virtual std::optional<std::u16string> ReadLine();
+    [[nodiscard]] virtual std::u16string ReadToEnd();
     virtual void Close() = 0;
 };
 

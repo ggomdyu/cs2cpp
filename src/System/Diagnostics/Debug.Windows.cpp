@@ -35,18 +35,6 @@ void Debug::WriteLine(std::u16string_view message)
 #endif
 }
 
-void Debug::Assert(bool condition, std::u16string_view message, std::u16string_view detailMessage)
-{
-#if defined(_DEBUG) || !defined(NDEBUG)
-    if (condition)
-    {
-        return;
-    }
-
-    Fail(message, detailMessage);
-#endif
-}
-
 void Debug::WriteIndent()
 {
     for (int32_t i = 0; i < _indentLevel; ++i)

@@ -55,26 +55,18 @@ int64_t Timer::GetInterval() const noexcept
 void Timer::Update()
 {
     if (!_isEnabled)
-    {
         return;
-    }
 
-    const auto currentTime = Environment::GetTickCount();
+    auto currentTime = Environment::GetTickCount();
     if ((currentTime - _prevTime) > _interval)
     {
         if (OnTimeElapsed != nullptr)
-        {
             OnTimeElapsed();
-        }
 
         if (_isAutoReset)
-        {
             _prevTime = currentTime;
-        }
         else
-        {
-            this->Stop();
-        }
+            Stop();
     }
 }
 

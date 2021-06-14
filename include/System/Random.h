@@ -1,27 +1,17 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <gsl/span>
 
 CS2CPP_NAMESPACE_BEGIN
 
-class RandomSampler
-{
-public:
-    virtual ~RandomSampler() noexcept = default;
-
-public:
-    [[nodiscard]] virtual double Sample() noexcept = 0;
-};
-    
-class Random
+class Random final
 {
 public:
     Random() noexcept;
     explicit Random(int32_t seed) noexcept;
-    template <typename T, std::enable_if_t<std::is_convertible_v<T*, RandomSampler*>>* = nullptr>
-    explicit Random(std::shared_ptr<T> sampler) noexcept(std::is_nothrow_constructible_v<T>);
 
 public:
     [[nodiscard]] int32_t Next() noexcept;
@@ -33,13 +23,14 @@ public:
     [[nodiscard]] double NextDouble(double minValue, double maxValue) noexcept;
 
 private:
-    std::shared_ptr<RandomSampler> _sampler;
-};
+    double Sample() noexcept;
 
-template <typename T, std::enable_if_t<std::is_convertible_v<T*, RandomSampler*>>*>
-Random::Random(std::shared_ptr<T> sampler) noexcept(std::is_nothrow_constructible_v<T>) :
-    _sampler(std::move(sampler))
-{
-}
+private:
+    std::array<unsigned, 32> _state;
+    unsigned int _stateIdx = 0;
+    unsigned int _z0 = 0;
+    unsigned int _z1 = 0;
+    unsigned int _z2 = 0;
+};
 
 CS2CPP_NAMESPACE_END

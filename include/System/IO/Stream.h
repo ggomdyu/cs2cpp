@@ -57,8 +57,6 @@ public:
     Stream() noexcept = default;
     Stream(const Stream& rhs) = delete;
     Stream(Stream&& rhs) noexcept = default;
-
-public:
     virtual ~Stream() = default;
 
 public:
@@ -85,12 +83,12 @@ public:
 
 inline int32_t Stream::Read(gsl::span<std::byte> bytes)
 {
-    return this->Read(&bytes[0], static_cast<int32_t>(bytes.size()));
+    return Read(&bytes[0], static_cast<int32_t>(bytes.size()));
 }
 
 inline bool Stream::Write(gsl::span<const std::byte> bytes)
 {
-    return this->Write(&bytes[0], static_cast<int32_t>(bytes.size()));
+    return Write(&bytes[0], static_cast<int32_t>(bytes.size()));
 }
 
 CS2CPP_NAMESPACE_END

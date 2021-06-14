@@ -24,9 +24,7 @@ std::optional<DateTime> File::GetCreationTime(std::u16string_view path)
 {
     auto ret = GetCreationTimeUtc(path);
     if (!ret)
-    {
         return {};
-    }
 
     return *ret + TimeZoneInfo::Local().GetBaseUtcOffset();
 }
@@ -35,9 +33,7 @@ std::optional<DateTime> File::GetLastAccessTime(std::u16string_view path)
 {
     auto ret = GetLastAccessTimeUtc(path);
     if (!ret)
-    {
         return {};
-    }
 
     return *ret + TimeZoneInfo::Local().GetBaseUtcOffset();
 }
@@ -46,9 +42,7 @@ std::optional<DateTime> File::GetLastWriteTime(std::u16string_view path)
 {
     auto ret = GetLastWriteTimeUtc(path);
     if (!ret)
-    {
         return {};
-    }
 
     return *ret + TimeZoneInfo::Local().GetBaseUtcOffset();
 }
@@ -108,7 +102,7 @@ std::optional<StreamWriter> File::AppendText(std::u16string_view path)
     return StreamWriter::Create(path, true);
 }
 
-std::optional<String> File::ReadAllText(std::u16string_view path)
+std::optional<std::u16string> File::ReadAllText(std::u16string_view path)
 {
     auto fileData = InternalReadAllText(path);
     const auto& encoding = DetectEncoding(fileData);
@@ -116,7 +110,7 @@ std::optional<String> File::ReadAllText(std::u16string_view path)
     return encoding.GetString(RemoveByteOrderMark(fileData, encoding));
 }
 
-std::optional<String> File::ReadAllText(std::u16string_view path, const Encoding& encoding)
+std::optional<std::u16string> File::ReadAllText(std::u16string_view path, const Encoding& encoding)
 {
     auto fileData = InternalReadAllText(path);
     return encoding.GetString(RemoveByteOrderMark(fileData, encoding));
@@ -126,9 +120,7 @@ bool File::WriteAllText(std::u16string_view path, std::u16string_view contents)
 {
     auto sw = StreamWriter::Create(path);
     if (!sw)
-    {
         return false;
-    }
 
     InternalWriteAllText(*sw, contents);
     return true;
@@ -138,46 +130,20 @@ bool File::WriteAllText(std::u16string_view path, std::u16string_view contents, 
 {
     auto sw = StreamWriter::Create(path, false, encoding);
     if (!sw)
-    {
         return false;
-    }
 
     InternalWriteAllText(*sw, contents);
     return true;
 }
 
-std::unique_ptr<std::byte[]> File::ReadAllBytes(std::u16string_view path, ReturnPointerTag)
+std::optional<std::vector<std::byte>> File::ReadAllBytes(std::u16string_view path)
 {
     SafeFilePointer fp = InternalFileOpen(path, u"rb");
-    if (fp == nullptr)
-    {
-        return nullptr;
-    }
-
-    fseek(fp, 0, SEEK_END);
-    const auto fileSize = static_cast<size_t>(ftell(fp));
-    fseek(fp, 0, SEEK_SET);
-
-    auto fileData = std::make_unique<std::byte[]>(static_cast<size_t>(fileSize));
-#ifdef _MSC_VER
-    fread_s(&fileData[0], fileSize, 1, fileSize, fp);
-#else
-    fread(&fileData[0], 1, fileSize, fp);
-#endif
-
-    return fileData;
-}
-
-std::optional<std::vector<std::byte>> File::ReadAllBytes(std::u16string_view path, ReturnVectorTag)
-{
-    SafeFilePointer fp = InternalFileOpen(path, u"rb");
-    if (fp == nullptr)
-    {
+    if (!fp)
         return {};
-    }
 
     fseek(fp, 0, SEEK_END);
-    const auto fileSize = static_cast<size_t>(ftell(fp));
+    auto fileSize = static_cast<size_t>(ftell(fp));
     fseek(fp, 0, SEEK_SET);
 
     std::vector<std::byte> fileData(fileSize);
@@ -193,43 +159,32 @@ std::optional<std::vector<std::byte>> File::ReadAllBytes(std::u16string_view pat
 bool File::WriteAllBytes(std::u16string_view path, gsl::span<const std::byte> bytes)
 {
     auto fs = FileStream::Create(path, FileMode::Create, FileAccess::Write, FileShare::Read);
-    if (fs == nullptr)
-    {
+    if (!fs)
         return false;
-    }
 
     fs->Write(bytes);
     return true;
 }
 
-std::optional<std::vector<String>> File::ReadAllLines(std::u16string_view path)
+std::optional<std::vector<std::u16string>> File::ReadAllLines(std::u16string_view path)
 {
     return ReadAllLines(path, Encoding::UTF8());
 }
 
-std::optional<std::vector<String>> File::ReadAllLines(std::u16string_view path, const Encoding& encoding)
+std::optional<std::vector<std::u16string>> File::ReadAllLines(std::u16string_view path, const Encoding& encoding)
 {
-    std::vector<String> lines;
-    auto pred = [&](String&& line)
-    {
-        lines.push_back(std::move(line));
-    };
-
-    if (!ReadLines(path, encoding, pred))
-    {
+    std::vector<std::u16string> lines;
+    if (!ReadLines(path, encoding, [&](std::u16string&& line) { lines.push_back(std::move(line)); }))
         return {};
-    }
 
-    return std::move(lines);
+    return std::optional<std::vector<std::u16string>>(std::move(lines));
 }
 
 bool File::WriteAllLines(std::u16string_view path, gsl::span<std::u16string_view> contents)
 {
     auto sw = StreamWriter::Create(path);
     if (!sw)
-    {
         return false;
-    }
 
     InternalWriteAllLines(*sw, contents);
     return true;
@@ -239,9 +194,7 @@ bool File::WriteAllLines(std::u16string_view path, gsl::span<std::u16string_view
 {
     auto sw = StreamWriter::Create(path, false, encoding);
     if (!sw)
-    {
         return false;
-    }
 
     InternalWriteAllLines(*sw, contents);
     return true;
@@ -251,9 +204,7 @@ bool File::AppendAllText(std::u16string_view path, std::u16string_view contents)
 {
     auto sw = StreamWriter::Create(path, true);
     if (!sw)
-    {
         return false;
-    }
 
     InternalWriteAllText(*sw, contents);
     return true;
@@ -263,9 +214,7 @@ bool File::AppendAllText(std::u16string_view path, std::u16string_view contents,
 {
     auto sw = StreamWriter::Create(path, true, encoding);
     if (!sw)
-    {
         return false;
-    }
 
     InternalWriteAllText(*sw, contents);
     return true;
@@ -275,9 +224,7 @@ bool File::AppendAllLines(std::u16string_view path, gsl::span<std::u16string_vie
 {
     auto sw = StreamWriter::Create(path, true);
     if (!sw)
-    {
         return false;
-    }
 
     InternalWriteAllLines(*sw, contents);
     return true;
@@ -287,9 +234,7 @@ bool File::AppendAllLines(std::u16string_view path, gsl::span<std::u16string_vie
 {
     auto sw = StreamWriter::Create(path, true, encoding);
     if (!sw)
-    {
         return false;
-    }
 
     InternalWriteAllLines(*sw, contents);
     return true;
@@ -298,13 +243,11 @@ bool File::AppendAllLines(std::u16string_view path, gsl::span<std::u16string_vie
 std::vector<std::byte> File::InternalReadAllText(std::u16string_view path)
 {
     SafeFilePointer fp = InternalFileOpen(path, u"r");
-    if (fp == nullptr)
-    {
+    if (!fp)
         return {};
-    }
 
     fseek(fp, 0, SEEK_END);
-    const auto fileSize = static_cast<size_t>(ftell(fp));
+    auto fileSize = static_cast<size_t>(ftell(fp));
     fseek(fp, 0, SEEK_SET);
 
     std::vector<std::byte> fileData(fileSize);
@@ -326,9 +269,7 @@ void File::InternalWriteAllText(StreamWriter& writer, std::u16string_view conten
 void File::InternalWriteAllLines(StreamWriter& writer, gsl::span<std::u16string_view> contents)
 {
     for (decltype(auto) content : contents)
-    {
         writer.WriteLine(content);
-    }
 
     writer.Close();
 }
@@ -336,51 +277,39 @@ void File::InternalWriteAllLines(StreamWriter& writer, gsl::span<std::u16string_
 const Encoding& File::DetectEncoding(gsl::span<const std::byte> bytes) noexcept
 {
     if (bytes.data() == nullptr || bytes.size() < 2)
-    {
         return Encoding::UTF8();
-    }
 
     if (bytes[0] == std::byte(0xff) && bytes[1] == std::byte(0xFE))
-    {
         return bytes.size() < 4 || bytes[2] != std::byte(0) || bytes[3] != std::byte(0) ?
             Encoding::Unicode() :
             Encoding::UTF32();
-    }
 
     if (bytes[0] == std::byte(0xfe) && bytes[1] == std::byte(0xff))
-    {
         return Encoding::BigEndianUnicode();
-    }
 
     if (bytes.size() >= 4 && bytes[0] == std::byte(0) && bytes[1] == std::byte(0) && bytes[2] == std::byte(0xfe) &&
         bytes[3] == std::byte(0xff))
-    {
         return *Encoding::GetEncoding(u"UTF32BE");
-    }
 
     return Encoding::UTF8();
 }
 
 gsl::span<const std::byte> File::RemoveByteOrderMark(gsl::span<const std::byte> bytes, const Encoding& encoding) noexcept
 {
-    const auto preamble = encoding.GetPreamble();
+    auto preamble = encoding.GetPreamble();
     if (preamble.size() > bytes.size())
-    {
         return bytes;
-    }
 
-    size_t startIndex = 0;
+    size_t j = 0;
     for (size_t i = 0; i < preamble.size(); ++i)
     {
         if (preamble[i] != std::byte(bytes[i]))
-        {
             break;
-        }
 
-        ++startIndex;
+        ++j;
     }
 
-    return gsl::span(bytes).subspan(startIndex);
+    return gsl::span(bytes).subspan(j);
 }
 
 CS2CPP_NAMESPACE_END

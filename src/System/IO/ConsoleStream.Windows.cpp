@@ -14,22 +14,15 @@ WindowsConsoleStream::WindowsConsoleStream(void* handle, FileAccess access, bool
 int32_t WindowsConsoleStream::Read(std::byte* bytes, int32_t count)
 {
     if (bytes == nullptr || count == 0 || !this->CanRead())
-    {
         return 0;
-    }
 
     DWORD readNum;
-    if ((_useFileAPIs ?
-        ReadFile(_handle, bytes, count, &readNum, nullptr) :
+    if ((_useFileAPIs ? ReadFile(_handle, bytes, count, &readNum, nullptr) :
         ReadConsole(_handle, bytes, count / sizeof(wchar_t), &readNum, nullptr)) == FALSE)
-    {
         return 0;
-    }
 
     if (!_useFileAPIs)
-    {
         readNum *= sizeof(wchar_t);
-    }
 
     return static_cast<int32_t>(readNum);
 }
@@ -38,9 +31,7 @@ int32_t WindowsConsoleStream::ReadByte()
 {
     std::array<std::byte, 1> byte{};
     if (this->Read(byte.data(), 1) == 0)
-    {
         return -1;
-    }
 
     return static_cast<int32_t>(byte[0]);
 }
@@ -48,9 +39,7 @@ int32_t WindowsConsoleStream::ReadByte()
 bool WindowsConsoleStream::Write(const std::byte* bytes, int32_t count)
 {
     if (bytes == nullptr || count == 0 || !this->CanWrite())
-    {
         return false;
-    }
 
     DWORD writtenNum;
     return !!(_useFileAPIs ?

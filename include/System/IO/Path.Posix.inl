@@ -4,7 +4,7 @@ CS2CPP_NAMESPACE_BEGIN
     
 constexpr gsl::span<const char16_t> Path::GetInvalidFileNameChars() noexcept
 {
-    constexpr char16_t invalidFileNameChars[] = {u'\0', u'a'};
+    constexpr char16_t invalidFileNameChars[] = {u'\0', u'/'};
     return invalidFileNameChars;
 }
 

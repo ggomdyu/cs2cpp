@@ -20,9 +20,7 @@ std::optional<struct _stat> CreateStat(std::u16string_view path)
 {
     struct _stat s{};
     if (_wstat(reinterpret_cast<const wchar_t*>(path.data()), &s) != 0)
-    {
         return {};
-    }
 
     return s;
 }
@@ -39,9 +37,7 @@ bool File::Delete(std::u16string_view path)
 {
     auto s = detail::file::CreateStat(path);
     if (!s || !detail::file::S_ISREG(s->st_mode))
-    {
         return false;
-    }
 
     return _wremove(reinterpret_cast<const wchar_t*>(path.data())) == 0;
 }
@@ -50,9 +46,7 @@ bool File::Exists(std::u16string_view path)
 {
     auto s = detail::file::CreateStat(path);
     if (!s || !detail::file::S_ISREG(s->st_mode))
-    {
         return false;
-    }
 
     return true;
 }
@@ -61,9 +55,7 @@ bool File::Move(std::u16string_view srcPath, std::u16string_view destPath)
 {
     auto s = detail::file::CreateStat(srcPath);
     if (!s || !detail::file::S_ISREG(s->st_mode))
-    {
         return false;
-    }
 
     return _wrename(reinterpret_cast<const wchar_t*>(srcPath.data()), reinterpret_cast<const wchar_t*>(destPath.data())) == 0;
 }
@@ -85,72 +77,50 @@ bool File::SetAttributes(std::u16string_view path, FileAttributes fileAttributes
 
 bool File::SetCreationTimeUtc(std::u16string_view path, DateTime creationTimeUtc)
 {
-    const SafeHandle handle(CreateFile2(reinterpret_cast<const wchar_t*>(path.data()), GENERIC_WRITE,
-        FILE_SHARE_READ, OPEN_EXISTING, nullptr));
-    if (handle == nullptr)
-    {
+    SafeHandle handle(CreateFile2(reinterpret_cast<const wchar_t*>(path.data()), GENERIC_WRITE, FILE_SHARE_READ, OPEN_EXISTING, nullptr));
+    if (!handle)
         return false;
-    }
 
-    const auto ticks = creationTimeUtc.ToFileTimeUtc();
+    auto ticks = creationTimeUtc.ToFileTimeUtc();
+
     auto fileTime = FILETIME{};
     fileTime.dwLowDateTime = static_cast<DWORD>(ticks);
     fileTime.dwHighDateTime = static_cast<DWORD>(ticks >> 32);
 
-    if (SetFileTime(handle, &fileTime, nullptr, nullptr) == 0)
-    {
-        return false;
-    }
-
-    return true;
+    return SetFileTime(handle, &fileTime, nullptr, nullptr);
 }
 
 bool File::SetLastAccessTimeUtc(std::u16string_view path, DateTime lastAccessTimeUtc)
 {
-    const SafeHandle handle(CreateFile2(reinterpret_cast<const wchar_t*>(path.data()), GENERIC_WRITE,
-        FILE_SHARE_READ, OPEN_EXISTING, nullptr));
-    if (handle == nullptr)
-    {
+    SafeHandle handle(CreateFile2(reinterpret_cast<const wchar_t*>(path.data()), GENERIC_WRITE, FILE_SHARE_READ,
+        OPEN_EXISTING, nullptr));
+    if (!handle)
         return false;
-    }
 
-    const auto ticks = lastAccessTimeUtc.ToFileTimeUtc();
+    auto ticks = lastAccessTimeUtc.ToFileTimeUtc();
     FILETIME fileTime{static_cast<DWORD>(ticks), static_cast<DWORD>(ticks >> 32)};
-    if (SetFileTime(handle, nullptr, &fileTime, nullptr) == 0)
-    {
-        return false;
-    }
 
-    return true;
+    return SetFileTime(handle, nullptr, &fileTime, nullptr);
 }
 
 bool File::SetLastWriteTimeUtc(std::u16string_view path, DateTime lastWriteTimeUtc)
 {
-    const SafeHandle handle(CreateFile2(reinterpret_cast<const wchar_t*>(path.data()), GENERIC_WRITE,
-        FILE_SHARE_READ, OPEN_EXISTING, nullptr));
-    if (handle == nullptr)
-    {
+    SafeHandle handle(CreateFile2(reinterpret_cast<const wchar_t*>(path.data()), GENERIC_WRITE, FILE_SHARE_READ,
+        OPEN_EXISTING, nullptr));
+    if (!handle)
         return false;
-    }
 
-    const auto ticks = lastWriteTimeUtc.ToFileTimeUtc();
-    const FILETIME fileTime{static_cast<DWORD>(ticks), static_cast<DWORD>(ticks >> 32)};
-    if (SetFileTime(handle, nullptr, nullptr, &fileTime) == 0)
-    {
-        return false;
-    }
+    auto ticks = lastWriteTimeUtc.ToFileTimeUtc();
+    FILETIME fileTime{static_cast<DWORD>(ticks), static_cast<DWORD>(ticks >> 32)};
 
-    return true;
+    return SetFileTime(handle, nullptr, nullptr, &fileTime);
 }
 
 std::optional<FileAttributes> File::GetAttributes(std::u16string_view path)
 {
     WIN32_FILE_ATTRIBUTE_DATA fileAttributeData;
-    if (GetFileAttributesExW(reinterpret_cast<const wchar_t*>(path.data()), GetFileExInfoStandard,
-        &fileAttributeData) == FALSE)
-    {
+    if (!GetFileAttributesExW(reinterpret_cast<const wchar_t*>(path.data()), GetFileExInfoStandard, &fileAttributeData))
         return {};
-    }
 
     return FileAttributes(fileAttributeData.dwFileAttributes);
 }
@@ -159,9 +129,7 @@ std::optional<DateTime> File::GetCreationTimeUtc(std::u16string_view path)
 {
     auto s = detail::file::CreateStat(path);
     if (!s)
-    {
         return {};
-    }
 
     return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_ctime);
 }
@@ -170,9 +138,7 @@ std::optional<DateTime> File::GetLastAccessTimeUtc(std::u16string_view path)
 {
     auto s = detail::file::CreateStat(path);
     if (!s)
-    {
         return {};
-    }
 
     return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_atime);
 }
@@ -181,9 +147,7 @@ std::optional<DateTime> File::GetLastWriteTimeUtc(std::u16string_view path)
 {
     auto s = detail::file::CreateStat(path);
     if (!s)
-    {
         return {};
-    }
 
     return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_mtime);
 }
@@ -198,7 +162,7 @@ SafeFilePointer File::InternalFileOpen(std::u16string_view path, std::u16string_
 
 bool File::Replace(std::u16string_view srcPath, std::u16string_view destPath, const std::u16string_view* destBackupPath, bool ignoreMetadataErrors)
 {
-    return !!ReplaceFileW(reinterpret_cast<const wchar_t*>(&destPath[0]), reinterpret_cast<const wchar_t*>(&srcPath[0]),
+    return ReplaceFileW(reinterpret_cast<const wchar_t*>(&destPath[0]), reinterpret_cast<const wchar_t*>(&srcPath[0]),
         destBackupPath ? reinterpret_cast<const wchar_t*>(&destBackupPath[0]) : nullptr,
         ignoreMetadataErrors ? REPLACEFILE_IGNORE_MERGE_ERRORS : 0, nullptr, nullptr);
 }

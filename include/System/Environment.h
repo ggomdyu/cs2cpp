@@ -75,37 +75,37 @@ public:
 public:
     static bool SetEnvironmentVariable(std::u16string_view name, std::u16string_view value);
     static bool SetEnvironmentVariable(std::u16string_view name, std::u16string_view value, EnvironmentVariableTarget target);
-    [[nodiscard]] static std::optional<String> GetEnvironmentVariable(std::u16string_view name);
-    [[nodiscard]] static std::optional<String> GetEnvironmentVariable(std::u16string_view name, EnvironmentVariableTarget target);
-    [[nodiscard]] static String GetCurrentDirectory();
-    [[nodiscard]] static String GetFolderPath(SpecialFolder folder);
+    [[nodiscard]] static std::optional<std::u16string> GetEnvironmentVariable(std::u16string_view name);
+    [[nodiscard]] static std::optional<std::u16string> GetEnvironmentVariable(std::u16string_view name, EnvironmentVariableTarget target);
+    [[nodiscard]] static std::u16string GetCurrentDirectory();
+    [[nodiscard]] static std::u16string GetFolderPath(SpecialFolder folder);
     [[nodiscard]] static constexpr std::u16string_view GetNewLine() noexcept;
     [[nodiscard]] static int32_t GetSystemPageSize();
     [[nodiscard]] static int32_t GetCurrentManagedThreadId();
-    [[nodiscard]] static String GetUserName();
-    [[nodiscard]] static String GetMachineName();
-    [[nodiscard]] static String GetUserDomainName();
-    [[nodiscard]] static const String& GetCommandLine();
-    [[nodiscard]] static const std::vector<String>& GetCommandLineArgs();
+    [[nodiscard]] static std::u16string GetUserName();
+    [[nodiscard]] static std::u16string GetMachineName();
+    [[nodiscard]] static std::u16string GetUserDomainName();
+    [[nodiscard]] static const std::u16string& GetCommandLine();
+    [[nodiscard]] static const std::vector<std::u16string>& GetCommandLineArgs();
     [[noreturn]] static void Exit(int32_t exitCode);
     [[nodiscard]] static int64_t GetTickCount();
     [[nodiscard]] static int32_t GetProcessorCount();
     [[nodiscard]] static bool Is64BitProcess();
     [[nodiscard]] static bool Is64BitOperatingSystem();
     [[noreturn]] static void FailFast(std::u16string_view message);
-    [[nodiscard]] static String GetStackTrace();
-    [[nodiscard]] static String GetSystemDirectory();
-    [[nodiscard]] static std::map<String, String> GetEnvironmentVariables();
+    [[nodiscard]] static std::u16string GetStackTrace();
+    [[nodiscard]] static std::u16string GetSystemDirectory();
+    [[nodiscard]] static std::map<std::u16string, std::u16string> GetEnvironmentVariables();
     [[nodiscard]] static OperatingSystem GetOSVersion();
     [[nodiscard]] static bool GetUserInteractive();
     [[nodiscard]] static int64_t GetWorkingSet();
-    [[nodiscard]] static std::vector<String> GetLogicalDrives();
+    [[nodiscard]] static std::vector<std::u16string> GetLogicalDrives();
 
-    //[[nodiscard]] static std::map<String, String> GetEnvironmentVariables(EnvironmentVariableTarget target);
+    //static std::map<String, String> GetEnvironmentVariables(EnvironmentVariableTarget target);
     //public static string ExpandEnvironmentVariables(string name);
 
 private:
-    [[nodiscard]] static constexpr bool IsValidEnvironmentVariableName(std::u16string_view name) noexcept;
+    static constexpr bool IsValidEnvironmentVariableName(std::u16string_view name) noexcept;
 
 private:
     static constexpr int32_t MaxEnvVariableValueLength = 32767;
@@ -116,19 +116,13 @@ private:
 constexpr bool Environment::IsValidEnvironmentVariableName(std::u16string_view name) noexcept
 {
     if (name.length() == 0 || name[0] == u'\0')
-    {
         return false;
-    }
 
-    if (static_cast<int32_t>(name.length()) >= MaxEnvVariableValueLength)
-    {
+    if (name.length() >= MaxEnvVariableValueLength)
         return false;
-    }
 
     if (name.find(u'=') != std::u16string_view::npos)
-    {
         return false;
-    }
 
     return true;
 }

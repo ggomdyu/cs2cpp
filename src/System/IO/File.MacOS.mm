@@ -66,9 +66,7 @@ bool File::SetLastWriteTimeUtc(std::u16string_view path, DateTime lastWriteTimeU
 bool File::Copy(std::u16string_view srcPath, std::u16string_view destPath, bool overwrite)
 {
     if (overwrite)
-    {
         Delete(destPath);
-    }
 
     auto srcPathChars = reinterpret_cast<const unichar*>(srcPath.data());
     auto destPathChars = reinterpret_cast<const unichar*>(destPath.data());

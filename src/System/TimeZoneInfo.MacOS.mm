@@ -4,20 +4,25 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
+namespace
+{
+
+auto ConvertToUTF16String = [](NSString* str) {
+    return std::u16string(reinterpret_cast<const char16_t*>([str cStringUsingEncoding:NSUTF16StringEncoding]));
+};
+
+}
+
 [[nodiscard]] TimeZoneInfo TimeZoneInfo::CreateLocal()
 {
-    auto toUtf16 = [](NSString* str) {
-        return reinterpret_cast<const char16_t*>([str cStringUsingEncoding:NSUTF16StringEncoding]);
-    };
-
     NSTimeZone* localTimeZone = [NSTimeZone localTimeZone];
-    auto id = toUtf16([localTimeZone name]);
+    auto id = ConvertToUTF16String([localTimeZone name]);
     auto supportsDaylightSavingTime = [localTimeZone isDaylightSavingTime];
     auto baseUtcOffset = TimeSpan(TimeSpan::TicksPerSecond * [localTimeZone secondsFromGMT]);
 
     NSLocale* currentLocale = [NSLocale currentLocale];
-    auto standardName = toUtf16([localTimeZone localizedName:NSTimeZoneNameStyleStandard locale:currentLocale]);
-    auto daylightDisplayName = toUtf16([localTimeZone localizedName:NSTimeZoneNameStyleDaylightSaving locale:currentLocale]);
+    auto standardName = ConvertToUTF16String([localTimeZone localizedName:NSTimeZoneNameStyleStandard locale:currentLocale]);
+    auto daylightDisplayName = ConvertToUTF16String([localTimeZone localizedName:NSTimeZoneNameStyleDaylightSaving locale:currentLocale]);
 
     return TimeZoneInfo(id, baseUtcOffset, standardName, standardName, daylightDisplayName, supportsDaylightSavingTime);
 }

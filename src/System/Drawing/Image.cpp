@@ -17,15 +17,13 @@ namespace detail::image
 
 void FlipRGBAImageX(std::byte* imageData, int32_t width, int32_t height)
 {
-    if (imageData == nullptr)
-    {
+    if (!imageData)
         return;
-    }
 
     using Color4b = uint32_t;
 
 #if CS2CPP_SIMD_SSE2
-    const auto simdUnusedSize = (width * height) % 8;
+    auto simdUnusedSize = (width * height) % 8;
     for (int32_t y = 0; y < height; ++y)
     {
         if (simdUnusedSize > 0)
@@ -33,17 +31,15 @@ void FlipRGBAImageX(std::byte* imageData, int32_t width, int32_t height)
             auto* frontIt = reinterpret_cast<Color4b*>(&imageData[y * width + width / 2 - simdUnusedSize / 2]);
             auto* backIt = frontIt + simdUnusedSize - 1;
             for (; frontIt < backIt; ++frontIt, --backIt)
-            {
                 std::swap(*frontIt, *backIt);
-            }
         }
 
         auto* frontIt = reinterpret_cast<__m128i*>(&imageData[y * width * 4]);
         auto* backIt = reinterpret_cast<__m128i*>(&imageData[(y + 1) * width * 4 - static_cast<int32_t>(sizeof(__m128i))]);
         for (; frontIt < backIt; ++frontIt, --backIt)
         {
-            const auto r1 = _mm_shuffle_epi32(_mm_loadu_si128(frontIt), _MM_SHUFFLE(0, 1, 2, 3));
-            const auto r2 = _mm_shuffle_epi32(_mm_loadu_si128(backIt), _MM_SHUFFLE(0, 1, 2, 3));
+            auto r1 = _mm_shuffle_epi32(_mm_loadu_si128(frontIt), _MM_SHUFFLE(0, 1, 2, 3));
+            auto r2 = _mm_shuffle_epi32(_mm_loadu_si128(backIt), _MM_SHUFFLE(0, 1, 2, 3));
             _mm_storeu_si128(frontIt, r2);
             _mm_storeu_si128(backIt, r1);
         }
@@ -63,31 +59,27 @@ void FlipRGBAImageX(std::byte* imageData, int32_t width, int32_t height)
 
 void FlipRGBAImageXY(std::byte* imageData, int32_t width, int32_t height)
 {
-    if (imageData == nullptr)
-    {
+    if (!imageData)
         return;
-    }
 
     using Color4b = uint32_t;
 
 #if CS2CPP_SIMD_SSE2
-    const auto simdUnusedSize = (width * height) % 8;
+    auto simdUnusedSize = (width * height) % 8;
     if (simdUnusedSize > 0)
     {
         auto* frontIt = reinterpret_cast<Color4b*>(&imageData[width * height / 2 - simdUnusedSize / 2]);
         auto* backIt = frontIt + simdUnusedSize - 1;
         for (; frontIt < backIt; ++frontIt, --backIt)
-        {
             std::swap(*frontIt, *backIt);
-        }
     }
 
     auto* frontIt = reinterpret_cast<__m128i*>(imageData);
     auto* backIt = reinterpret_cast<__m128i*>(&imageData[width * height * 4 - static_cast<int32_t>(sizeof(__m128i))]);
     for (; frontIt < backIt; ++frontIt, --backIt)
     {
-        const auto r1 = _mm_shuffle_epi32(_mm_loadu_si128(frontIt), _MM_SHUFFLE(0, 1, 2, 3));
-        const auto r2 = _mm_shuffle_epi32(_mm_loadu_si128(backIt), _MM_SHUFFLE(0, 1, 2, 3));
+        auto r1 = _mm_shuffle_epi32(_mm_loadu_si128(frontIt), _MM_SHUFFLE(0, 1, 2, 3));
+        auto r2 = _mm_shuffle_epi32(_mm_loadu_si128(backIt), _MM_SHUFFLE(0, 1, 2, 3));
         _mm_storeu_si128(frontIt, r2);
         _mm_storeu_si128(backIt, r1);
     }
@@ -103,13 +95,11 @@ void FlipRGBAImageXY(std::byte* imageData, int32_t width, int32_t height)
 
 void FlipImageY(std::byte* imageData, int32_t width, int32_t height, int32_t bytesPerPixel)
 {
-    if (imageData == nullptr)
-    {
+    if (!imageData)
         return;
-    }
 
-    const int32_t stride = width * bytesPerPixel;
-    const auto tempRowBuffer = std::make_unique<std::byte[]>(static_cast<size_t>(stride));
+    int32_t stride = width * bytesPerPixel;
+    auto tempRowBuffer = std::make_unique<std::byte[]>(static_cast<size_t>(stride));
 
     auto* frontIt = imageData;
     auto* backIt = &imageData[(height - 1) * stride];
@@ -123,23 +113,19 @@ void FlipImageY(std::byte* imageData, int32_t width, int32_t height, int32_t byt
 
 void RotateRGBAImageRight90Degrees(std::byte* imageData, int32_t width, int32_t height)
 {
-    if (imageData == nullptr)
-    {
+    if (!imageData)
         return;
-    }
 
     using Color4b = uint32_t;
-    const auto imageDataSize = static_cast<int64_t>(width) * height * 4;
-    const auto tempBuffer = std::make_unique<std::byte[]>(imageDataSize);
+    auto imageDataSize = static_cast<int64_t>(width) * height * 4;
+    auto tempBuffer = std::make_unique<std::byte[]>(imageDataSize);
 
     auto* srcRow = reinterpret_cast<Color4b*>(imageData);
     auto* destCol = &(reinterpret_cast<Color4b*>(tempBuffer.get()))[height - 1];
     for (; srcRow < &(reinterpret_cast<Color4b*>(imageData)[width * height]); srcRow += width, --destCol)
     {
         for (int32_t x = 0; x < width; ++x)
-        {
             destCol[x * height] = srcRow[x];
-        }
     }
 
     std::copy_n(tempBuffer.get(), imageDataSize, imageData);
@@ -147,23 +133,19 @@ void RotateRGBAImageRight90Degrees(std::byte* imageData, int32_t width, int32_t 
 
 void RotateRGBAImageLeft90Degrees(std::byte* imageData, int32_t width, int32_t height)
 {
-    if (imageData == nullptr)
-    {
+    if (!imageData)
         return;
-    }
 
     using Color4b = uint32_t;
-    const auto imageDataSize = width * height * 4;
-    const auto tempBuffer = std::make_unique<std::byte[]>(imageDataSize);
+    auto imageDataSize = width * height * 4;
+    auto tempBuffer = std::make_unique<std::byte[]>(imageDataSize);
 
     auto* srcRow = reinterpret_cast<Color4b*>(imageData);
     auto* destCol = &reinterpret_cast<Color4b*>(tempBuffer.get())[(width - 1) * height];
     for (; srcRow < &(reinterpret_cast<Color4b*>(imageData)[width * height]); srcRow += width, ++destCol)
     {
         for (int32_t x = 0; x < width; ++x)
-        {
             destCol[-x * height] = srcRow[x];
-        }
     }
 
     std::copy_n(tempBuffer.get(), imageDataSize, imageData);
@@ -200,11 +182,9 @@ std::byte Image::operator[](int32_t index) const
 
 std::optional<Image> Image::Create(const char16_t* filePath)
 {
-    auto fileData = File::ReadAllBytes(filePath, ReturnVectorTag{});
+    auto fileData = File::ReadAllBytes(filePath);
     if (!fileData)
-    {
         return {};
-    }
 
     return Create(*fileData);
 }
@@ -213,10 +193,8 @@ std::optional<Image> Image::Create(gsl::span<const std::byte> bytes)
 {
     int width = 0, height = 0;
     auto imageData = std::unique_ptr<std::byte[]>(reinterpret_cast<std::byte*>(stbi_load_from_memory(reinterpret_cast<const stbi_uc*>(&bytes[0]), static_cast<int>(bytes.size()), &width, &height, nullptr, STBI_rgb_alpha)));
-    if (imageData == nullptr)
-    {
+    if (!imageData)
         return {};
-    }
 
     return Image(std::move(imageData), static_cast<int32_t>(width), static_cast<int32_t>(height), PixelFormat::RGBA8888);
 }

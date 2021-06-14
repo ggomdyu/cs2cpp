@@ -26,8 +26,6 @@ public:
     Functor() = default;
     Functor(const Functor& rhs) = delete;
     Functor(Functor&& rhs) = delete;
-
-public:
     virtual ~Functor() = default;
 
 public:
@@ -35,10 +33,10 @@ public:
     Functor& operator=(Functor&& rhs) = delete;
 
 public:
-    [[nodiscard]] virtual R Invoke(Ts... args) const = 0;
+    virtual R Invoke(Ts... args) const = 0;
     virtual void CopyTo(Functor* functor) const = 0;
     virtual void Destroy() = 0;
-    [[nodiscard]] virtual size_t GetSize() const noexcept = 0;
+    virtual size_t GetSize() const noexcept = 0;
 };
 
 template <typename F, typename R, typename... Ts>
@@ -52,10 +50,10 @@ public:
     explicit FunctorImpl(Storage storage) noexcept;
 
 public:
-    [[nodiscard]] R Invoke(Ts... args) const override;
+    R Invoke(Ts... args) const override;
     void CopyTo(Functor<R, Ts...>* functor) const override;
     void Destroy() override;
-    [[nodiscard]] size_t GetSize() const noexcept override;
+    size_t GetSize() const noexcept override;
 
 private:
     Storage _storage;
@@ -82,9 +80,7 @@ R FunctorImpl<F, R, Ts...>::Invoke(Ts... args) const
         return (reinterpret_cast<typename FunctionTraits<F>::ClassType*>(receiver)->*(function))(std::move(args)...);
     }
     else
-    {
         return std::get<0>(_storage)(std::move(args)...);
-    }
 }
 
 template <typename F, typename R, typename... Ts>
@@ -133,22 +129,20 @@ public:
     Delegate(F function);
     template <typename F>
     Delegate(F function, void* receiver);
-
-public:
     ~Delegate();
 
 public:
     template <typename... Ts2>
-    [[nodiscard]] R operator()(Ts2&&... args) const;
+    R operator()(Ts2&&... args) const;
     Delegate& operator=(const Delegate& rhs);
     Delegate& operator=(Delegate&& rhs) noexcept;
-    [[nodiscard]] constexpr bool operator==(std::nullptr_t rhs) const noexcept;
-    [[nodiscard]] constexpr bool operator!=(std::nullptr_t rhs) const noexcept;
+    constexpr bool operator==(std::nullptr_t rhs) const noexcept;
+    constexpr bool operator!=(std::nullptr_t rhs) const noexcept;
 
 private:
     template <typename F>
-    [[nodiscard]] static constexpr bool IsLargeFunction() noexcept;
-    [[nodiscard]] bool IsDynamicAllocated() const noexcept;
+    static constexpr bool IsLargeFunction() noexcept;
+    bool IsDynamicAllocated() const noexcept;
     void Copy(const Delegate& rhs);
     void Move(Delegate&& rhs) noexcept;
     void Destroy();
@@ -176,14 +170,14 @@ template <typename R, typename... Ts>
 Delegate<R(Ts...)>::Delegate(const Delegate& rhs) :
     Delegate()
 {
-    this->Copy(rhs);
+    Copy(rhs);
 }
 
 template <typename R, typename... Ts>
 Delegate<R(Ts...)>::Delegate(Delegate&& rhs) noexcept :
     Delegate()
 {
-    this->Move(std::move(rhs));
+    Move(std::move(rhs));
 }
 
 template <typename R, typename... Ts>
@@ -193,13 +187,9 @@ Delegate<R(Ts...)>::Delegate(F function) :
 {
     using Function = std::decay_t<F>;
     if constexpr (Delegate::template IsLargeFunction<Function>())
-    {
         _functor = static_cast<Functor*>(operator new(sizeof(FunctorImpl<Function>)));
-    }
     else
-    {
         _functor = reinterpret_cast<Functor*>(&_storage[0]);
-    }
 
     new (_functor) FunctorImpl<Function>(typename FunctorImpl<Function>::Storage{std::move(function)});
 }
@@ -211,13 +201,9 @@ Delegate<R(Ts...)>::Delegate(F function, void* receiver) :
 {
     using Function = std::decay_t<F>;
     if constexpr (Delegate::template IsLargeFunction<Function>())
-    {
         _functor = static_cast<Functor*>(operator new(sizeof(FunctorImpl<Function>)));
-    }
     else
-    {
         _functor = reinterpret_cast<Functor*>(&_storage[0]);
-    }
 
     new (_functor) FunctorImpl<Function>(typename FunctorImpl<Function>::Storage{std::move(function), receiver});
 }
@@ -225,7 +211,7 @@ Delegate<R(Ts...)>::Delegate(F function, void* receiver) :
 template <typename R, typename... Ts>
 Delegate<R(Ts...)>::~Delegate()
 {
-    this->Destroy();
+    Destroy();
 }
 
 template <typename R, typename... Ts>
@@ -233,9 +219,7 @@ template <typename... Ts2>
 R Delegate<R(Ts...)>::operator()(Ts2&&... args) const
 {
     if (_functor == nullptr)
-    {
         return R();
-    }
 
     return _functor->Invoke(std::forward<Ts2>(args)...);
 }
@@ -251,9 +235,7 @@ template <typename R, typename... Ts>
 Delegate<R(Ts...)>& Delegate<R(Ts...)>::operator=(const Delegate& rhs)
 {
     if (this != &rhs)
-    {
-        this->Copy(rhs);
-    }
+        Copy(rhs);
 
     return *this;
 }
@@ -262,9 +244,7 @@ template <typename R, typename... Ts>
 Delegate<R(Ts...)>& Delegate<R(Ts...)>::operator=(Delegate&& rhs) noexcept
 {
     if (this != &rhs)
-    {
-        this->Move(std::move(rhs));
-    }
+        Move(std::move(rhs));
 
     return *this;
 }
@@ -290,12 +270,10 @@ bool Delegate<R(Ts...)>::IsDynamicAllocated() const noexcept
 template <typename R, typename... Ts>
 void Delegate<R(Ts...)>::Copy(const Delegate& rhs)
 {
-    this->Destroy();
+    Destroy();
 
     if (rhs._functor == nullptr)
-    {
         return;
-    }
 
     _functor = static_cast<Functor*>(rhs.IsDynamicAllocated() ? operator new(rhs._functor->GetSize()) : &_storage[0]);
 
@@ -306,9 +284,7 @@ template <typename R, typename... Ts>
 void Delegate<R(Ts...)>::Move(Delegate&& rhs) noexcept
 {
     if (IsDynamicAllocated() && rhs.IsDynamicAllocated())
-    {
         std::swap(_functor, rhs._functor);
-    }
     else if (rhs.IsDynamicAllocated())
     {
         _functor = rhs._functor;
@@ -317,9 +293,7 @@ void Delegate<R(Ts...)>::Move(Delegate&& rhs) noexcept
     else
     {
         if (IsDynamicAllocated())
-        {
             std::swap(_functor, rhs._functor);
-        }
 
         _storage = rhs._storage;
         _functor = reinterpret_cast<Functor*>(&_storage[0]);
@@ -330,16 +304,12 @@ template <typename R, typename... Ts>
 void Delegate<R(Ts...)>::Destroy()
 {
     if (_functor == nullptr)
-    {
         return;
-    }
 
     _functor->Destroy();
 
-    if (this->IsDynamicAllocated())
-    {
+    if (IsDynamicAllocated())
         operator delete(_functor);
-    }
 
     _storage = {};
 }
