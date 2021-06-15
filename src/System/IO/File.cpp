@@ -1,9 +1,72 @@
-#include <cstdio>
-
 #include "System/IO/File.h"
 #include "System/TimeZoneInfo.h"
 
 CS2CPP_NAMESPACE_BEGIN
+
+bool File::AppendAllLines(std::u16string_view path, gsl::span<std::u16string_view> contents)
+{
+    auto sw = StreamWriter::Create(path, true);
+    if (!sw)
+        return false;
+
+    InternalWriteAllLines(*sw, contents);
+    return true;
+}
+
+bool File::AppendAllLines(std::u16string_view path, gsl::span<std::u16string_view> contents, const Encoding& encoding)
+{
+    auto sw = StreamWriter::Create(path, true, encoding);
+    if (!sw)
+        return false;
+
+    InternalWriteAllLines(*sw, contents);
+    return true;
+}
+
+bool File::AppendAllText(std::u16string_view path, std::u16string_view contents)
+{
+    auto sw = StreamWriter::Create(path, true);
+    if (!sw)
+        return false;
+
+    InternalWriteAllText(*sw, contents);
+    return true;
+}
+
+bool File::AppendAllText(std::u16string_view path, std::u16string_view contents, const Encoding& encoding)
+{
+    auto sw = StreamWriter::Create(path, true, encoding);
+    if (!sw)
+        return false;
+
+    InternalWriteAllText(*sw, contents);
+    return true;
+}
+
+std::optional<StreamWriter> File::AppendText(std::u16string_view path)
+{
+    return StreamWriter::Create(path, true);
+}
+
+std::shared_ptr<FileStream> File::Create(std::u16string_view path)
+{
+    return FileStream::Create(path, FileMode::Create, FileAccess::ReadWrite, FileShare::None);
+}
+
+std::shared_ptr<FileStream> File::Create(std::u16string_view path, int32_t bufferSize)
+{
+    return FileStream::Create(path, FileMode::Create, FileAccess::ReadWrite, FileShare::None, bufferSize);
+}
+
+std::shared_ptr<FileStream> File::Create(std::u16string_view path, int32_t bufferSize, FileOptions options)
+{
+    return FileStream::Create(path, FileMode::Create, FileAccess::ReadWrite, FileShare::None, options, bufferSize);
+}
+
+std::optional<StreamWriter> File::CreateText(std::u16string_view path)
+{
+    return StreamWriter::Create(path, false);
+}
 
 bool File::SetCreationTime(std::u16string_view path, DateTime creationTime)
 {
@@ -47,21 +110,6 @@ std::optional<DateTime> File::GetLastWriteTime(std::u16string_view path)
     return *ret + TimeZoneInfo::Local().GetBaseUtcOffset();
 }
 
-std::shared_ptr<FileStream> File::Create(std::u16string_view path)
-{
-    return FileStream::Create(path, FileMode::Create, FileAccess::ReadWrite, FileShare::None);
-}
-
-std::shared_ptr<FileStream> File::Create(std::u16string_view path, int32_t bufferSize)
-{
-    return FileStream::Create(path, FileMode::Create, FileAccess::ReadWrite, FileShare::None, bufferSize);
-}
-
-std::shared_ptr<FileStream> File::Create(std::u16string_view path, int32_t bufferSize, FileOptions options)
-{
-    return FileStream::Create(path, FileMode::Create, FileAccess::ReadWrite, FileShare::None, options, bufferSize);
-}
-
 std::shared_ptr<FileStream> File::Open(std::u16string_view path, FileMode mode)
 {
     return Open(path, mode, mode == FileMode::Append ? FileAccess::Write : FileAccess::ReadWrite, FileShare::None);
@@ -82,58 +130,14 @@ std::shared_ptr<FileStream> File::OpenRead(std::u16string_view path)
     return FileStream::Create(path, FileMode::Open, FileAccess::Read, FileShare::Read);
 }
 
-std::shared_ptr<FileStream> File::OpenWrite(std::u16string_view path)
-{
-    return FileStream::Create(path, FileMode::OpenOrCreate, FileAccess::Write, FileShare::None);
-}
-
 std::optional<StreamReader> File::OpenText(std::u16string_view path)
 {
     return StreamReader::Create(path);
 }
 
-std::optional<StreamWriter> File::CreateText(std::u16string_view path)
+std::shared_ptr<FileStream> File::OpenWrite(std::u16string_view path)
 {
-    return StreamWriter::Create(path, false);
-}
-
-std::optional<StreamWriter> File::AppendText(std::u16string_view path)
-{
-    return StreamWriter::Create(path, true);
-}
-
-std::optional<std::u16string> File::ReadAllText(std::u16string_view path)
-{
-    auto fileData = InternalReadAllText(path);
-    const auto& encoding = DetectEncoding(fileData);
-
-    return encoding.GetString(RemoveByteOrderMark(fileData, encoding));
-}
-
-std::optional<std::u16string> File::ReadAllText(std::u16string_view path, const Encoding& encoding)
-{
-    auto fileData = InternalReadAllText(path);
-    return encoding.GetString(RemoveByteOrderMark(fileData, encoding));
-}
-
-bool File::WriteAllText(std::u16string_view path, std::u16string_view contents)
-{
-    auto sw = StreamWriter::Create(path);
-    if (!sw)
-        return false;
-
-    InternalWriteAllText(*sw, contents);
-    return true;
-}
-
-bool File::WriteAllText(std::u16string_view path, std::u16string_view contents, const Encoding& encoding)
-{
-    auto sw = StreamWriter::Create(path, false, encoding);
-    if (!sw)
-        return false;
-
-    InternalWriteAllText(*sw, contents);
-    return true;
+    return FileStream::Create(path, FileMode::OpenOrCreate, FileAccess::Write, FileShare::None);
 }
 
 std::optional<std::vector<std::byte>> File::ReadAllBytes(std::u16string_view path)
@@ -156,16 +160,6 @@ std::optional<std::vector<std::byte>> File::ReadAllBytes(std::u16string_view pat
     return fileData;
 }
 
-bool File::WriteAllBytes(std::u16string_view path, gsl::span<const std::byte> bytes)
-{
-    auto fs = FileStream::Create(path, FileMode::Create, FileAccess::Write, FileShare::Read);
-    if (!fs)
-        return false;
-
-    fs->Write(bytes);
-    return true;
-}
-
 std::optional<std::vector<std::u16string>> File::ReadAllLines(std::u16string_view path)
 {
     return ReadAllLines(path, Encoding::UTF8());
@@ -178,6 +172,31 @@ std::optional<std::vector<std::u16string>> File::ReadAllLines(std::u16string_vie
         return {};
 
     return std::optional<std::vector<std::u16string>>(std::move(lines));
+}
+
+std::optional<std::u16string> File::ReadAllText(std::u16string_view path)
+{
+    auto fileData = InternalReadAllText(path);
+    const auto& encoding = DetectEncoding(fileData);
+
+    return encoding.GetString(RemoveByteOrderMark(fileData, encoding));
+}
+
+std::optional<std::u16string> File::ReadAllText(std::u16string_view path, const Encoding& encoding)
+{
+    auto fileData = InternalReadAllText(path);
+    return encoding.GetString(RemoveByteOrderMark(fileData, encoding));
+}
+
+bool File::WriteAllBytes(std::u16string_view path, gsl::span<const std::byte> bytes)
+{
+    auto fs = FileStream::Create(path, FileMode::Create, FileAccess::Write, FileShare::Read);
+    if (!fs)
+        return false;
+
+    fs->Write(bytes);
+    fs->Close();
+    return true;
 }
 
 bool File::WriteAllLines(std::u16string_view path, gsl::span<std::u16string_view> contents)
@@ -200,9 +219,9 @@ bool File::WriteAllLines(std::u16string_view path, gsl::span<std::u16string_view
     return true;
 }
 
-bool File::AppendAllText(std::u16string_view path, std::u16string_view contents)
+bool File::WriteAllText(std::u16string_view path, std::u16string_view contents)
 {
-    auto sw = StreamWriter::Create(path, true);
+    auto sw = StreamWriter::Create(path);
     if (!sw)
         return false;
 
@@ -210,33 +229,13 @@ bool File::AppendAllText(std::u16string_view path, std::u16string_view contents)
     return true;
 }
 
-bool File::AppendAllText(std::u16string_view path, std::u16string_view contents, const Encoding& encoding)
+bool File::WriteAllText(std::u16string_view path, std::u16string_view contents, const Encoding& encoding)
 {
-    auto sw = StreamWriter::Create(path, true, encoding);
+    auto sw = StreamWriter::Create(path, false, encoding);
     if (!sw)
         return false;
 
     InternalWriteAllText(*sw, contents);
-    return true;
-}
-
-bool File::AppendAllLines(std::u16string_view path, gsl::span<std::u16string_view> contents)
-{
-    auto sw = StreamWriter::Create(path, true);
-    if (!sw)
-        return false;
-
-    InternalWriteAllLines(*sw, contents);
-    return true;
-}
-
-bool File::AppendAllLines(std::u16string_view path, gsl::span<std::u16string_view> contents, const Encoding& encoding)
-{
-    auto sw = StreamWriter::Create(path, true, encoding);
-    if (!sw)
-        return false;
-
-    InternalWriteAllLines(*sw, contents);
     return true;
 }
 
@@ -260,17 +259,17 @@ std::vector<std::byte> File::InternalReadAllText(std::u16string_view path)
     return fileData;
 }
 
-void File::InternalWriteAllText(StreamWriter& writer, std::u16string_view contents)
-{
-    writer.Write(contents);
-    writer.Close();
-}
-
 void File::InternalWriteAllLines(StreamWriter& writer, gsl::span<std::u16string_view> contents)
 {
     for (decltype(auto) content : contents)
         writer.WriteLine(content);
 
+    writer.Close();
+}
+
+void File::InternalWriteAllText(StreamWriter& writer, std::u16string_view contents)
+{
+    writer.Write(contents);
     writer.Close();
 }
 
