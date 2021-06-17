@@ -118,7 +118,7 @@ std::u16string Path::RemoveRelativeSegments(std::u16string_view path)
 
             if (i + 3 < path.length() && IsDirectorySeparator(path[i + 3]) && path[i + 2] == u'.' && path[i + 1] == u'.')
             {
-                size_t j = ret.size() == 0 ? 0 : ret.size() - 1;
+                int32_t j = static_cast<int32_t>(ret.size()) - 1;
                 for (; j >= 0; --j)
                 {
                     if (IsDirectorySeparator(ret[j]))

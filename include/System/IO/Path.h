@@ -35,10 +35,10 @@ public:
     [[nodiscard]] static std::u16string GetTempPath();
     [[nodiscard]] static constexpr gsl::span<const char16_t> GetInvalidFileNameChars() noexcept;
     [[nodiscard]] static constexpr gsl::span<const char16_t> GetInvalidPathChars() noexcept;
+    [[nodiscard]] static constexpr bool IsDirectorySeparator(char16_t c) noexcept;
 
 private:
     static constexpr int32_t GetRootLength(std::u16string_view path) noexcept;
-    static constexpr bool IsDirectorySeparator(char16_t c) noexcept;
     static constexpr bool IsValidDriveChar(char16_t c) noexcept;
     static std::u16string RemoveRelativeSegments(std::u16string_view path);
 

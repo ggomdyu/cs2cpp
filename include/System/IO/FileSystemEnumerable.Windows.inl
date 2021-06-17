@@ -16,7 +16,7 @@ namespace detail::filesystem_enumerable
 template <typename F>
 void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_view searchPattern, DWORD filterType, const F& callback)
 {
-    std::deque<String> directories(1, Path::Combine(path, searchPattern));
+    std::deque<std::u16string> directories(1, Path::Combine(path, searchPattern));
 
     while (!directories.empty())
     {
@@ -36,7 +36,7 @@ void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_vi
                     (findData.cFileName[1] == L'\0' || (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
                     continue;
 
-                auto newPath = Path::Combine(currentPath.Substring(0, currentPath.Length() - searchPattern.size()),
+                auto newPath = Path::Combine(currentPath.substr(0, currentPath.length() - searchPattern.size()),
                     reinterpret_cast<const char16_t*>(findData.cFileName));
                 newPath += Path::DirectorySeparatorChar;
                 newPath += searchPattern;
@@ -46,7 +46,7 @@ void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_vi
 
             if (findData.dwFileAttributes & filterType)
             {
-                auto newPath = Path::Combine(currentPath.Substring(0, currentPath.Length() - searchPattern.size()),
+                auto newPath = Path::Combine(currentPath.substr(0, currentPath.length() - searchPattern.size()),
                     reinterpret_cast<const char16_t*>(findData.cFileName));
                 if constexpr (std::is_same_v<typename FunctionTraits<F>::Return, bool>)
                 {

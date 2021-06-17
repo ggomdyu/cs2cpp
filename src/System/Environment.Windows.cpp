@@ -51,11 +51,13 @@ bool InternalSetEnvironmentVariable(HKEY key, LPCWSTR subKey, std::u16string_vie
     return true;
 }
 
-std::optional<String> InternalGetEnvironmentVariable(HKEY predefinedKey, LPCWSTR subKey, std::u16string_view name)
+std::optional<std::u16string> InternalGetEnvironmentVariable(HKEY predefinedKey, LPCWSTR subKey, std::u16string_view name)
 {
-    SafeRegistryHandle keyHandle;
-    if (RegOpenKeyExW(predefinedKey, subKey, 0, KEY_READ, keyHandle) != ERROR_SUCCESS)
+    HKEY nativeKeyHandle;
+    if (RegOpenKeyExW(predefinedKey, subKey, 0, KEY_READ, &nativeKeyHandle) != ERROR_SUCCESS)
         return {};
+
+    SafeRegistryHandle keyHandle(nativeKeyHandle);
 
     std::array<char16_t, 2048> tempData{};
     DWORD tempCbData = tempData.size();
@@ -65,7 +67,7 @@ std::optional<String> InternalGetEnvironmentVariable(HKEY predefinedKey, LPCWSTR
         reinterpret_cast<LPBYTE>(tempData.data()), &tempCbData) != ERROR_SUCCESS)
         return {};
 
-    return String(tempData.data());
+    return tempData.data();
 }
 
 std::vector<HMODULE> GetAllProcessModule(HANDLE processHandle)
@@ -221,44 +223,46 @@ bool Environment::SetEnvironmentVariable(std::u16string_view name, std::u16strin
     return detail::environment::InternalSetEnvironmentVariable(HKEY_CURRENT_USER, L"Environment", name, value);
 }
 
-std::optional<String> Environment::GetEnvironmentVariable(std::u16string_view name)
+std::optional<std::u16string> Environment::GetEnvironmentVariable(std::u16string_view name)
 {
-    auto wideCharName = reinterpret_cast<const wchar_t*>(name.data());
-    auto length = GetEnvironmentVariableW(wideCharName, nullptr, 0);
+    auto length = GetEnvironmentVariableW(reinterpret_cast<const wchar_t*>(name.data()), nullptr, 0);
     if (length == 0)
         return {};
 
-    std::vector<wchar_t> str(length);
-    if (GetEnvironmentVariableW(wideCharName, str.data(), length) == 0)
+    std::u16string ret;
+    ret.resize(length);
+
+    if (GetEnvironmentVariableW(reinterpret_cast<const wchar_t*>(name.data()),
+        reinterpret_cast<wchar_t*>(ret.data()), length) == 0)
         return {};
 
-    return String(reinterpret_cast<const char16_t*>(str.data()), length);
+    return std::optional<std::u16string>(std::move(ret));
 }
 
-std::optional<String> Environment::GetEnvironmentVariable(std::u16string_view name, EnvironmentVariableTarget target)
+std::optional<std::u16string> Environment::GetEnvironmentVariable(std::u16string_view name, EnvironmentVariableTarget target)
 {
     if (target == EnvironmentVariableTarget::Process)
         return GetEnvironmentVariable(name);
 
     if (target == EnvironmentVariableTarget::Machine)
-        return detail::environment::InternalGetEnvironmentVariable(HKEY_LOCAL_MACHINE, L"System\\CurrentControlSet\\Control\\Session Manager\\Environment", name);
+        return detail::environment::InternalGetEnvironmentVariable(HKEY_LOCAL_MACHINE,
+            L"System\\CurrentControlSet\\Control\\Session Manager\\Environment", name);
 
     return detail::environment::InternalGetEnvironmentVariable(HKEY_CURRENT_USER, L"Environment", name);
 }
 
-String Environment::GetFolderPath(SpecialFolder folder)
+std::u16string Environment::GetFolderPath(SpecialFolder folder)
 {
     std::array<wchar_t, 2048> wideCharPath{};
-
     if (SHGetFolderPathW(nullptr, static_cast<int>(folder), nullptr, 0, wideCharPath.data()) != S_OK)
-        return String::Empty;
+        return {};
 
-    return String(reinterpret_cast<const char16_t*>(wideCharPath.data()));
+    return reinterpret_cast<const char16_t*>(wideCharPath.data());
 }
 
-const String& Environment::GetCommandLine()
+const std::u16string& Environment::GetCommandLine()
 {
-    static String commandLine(reinterpret_cast<const char16_t*>(GetCommandLineW()));
+    static std::u16string commandLine(reinterpret_cast<const char16_t*>(GetCommandLineW()));
     return commandLine;
 }
 
@@ -308,56 +312,56 @@ int32_t Environment::GetCurrentManagedThreadId()
     return GetCurrentThreadId();
 }
 
-String Environment::GetUserName()
+std::u16string Environment::GetUserName()
 {
     std::array<wchar_t, 2048> name{};
     DWORD nameLen = name.size();
 
     if (GetUserNameW(name.data(), &nameLen) == FALSE)
-        return String::Empty;
+        return {};
 
-    return String(reinterpret_cast<const char16_t*>(name.data()), nameLen);
+    return {reinterpret_cast<const char16_t*>(name.data()), nameLen};
 }
 
-String Environment::GetMachineName()
+std::u16string Environment::GetMachineName()
 {
     std::array<wchar_t, 2048> name{};
     DWORD nameLen = name.size();
 
     if (GetComputerNameW(name.data(), &nameLen) == FALSE)
-        return String::Empty;
+        return {};
 
-    return String(reinterpret_cast<const char16_t*>(name.data()), nameLen);
+    return {reinterpret_cast<const char16_t*>(name.data()), nameLen};
 }
 
-String Environment::GetUserDomainName()
+std::u16string Environment::GetUserDomainName()
 {
     std::array<wchar_t, 2048> name{};
     DWORD nameLen = name.size();
 
     if (GetUserNameExW(NameSamCompatible, name.data(), &nameLen) == 0)
-        return String::Empty;
+        return {};
 
     auto str = wcschr(name.data(), L'\\');
     if (!str)
-        return String::Empty;
+        return {};
 
-    return String(reinterpret_cast<const char16_t*>(name.data()), static_cast<int32_t>(str - name.data()));
+    return {reinterpret_cast<const char16_t*>(name.data()), static_cast<size_t>(str - name.data())};
 }
 
-String Environment::GetStackTrace()
+std::u16string Environment::GetStackTrace()
 {
     auto str = reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data());
     auto strLen = detail::environment::InternalGetStackTrace(GlobalWideCharBuffer.data());
 
-    return String(str, strLen);
+    return {str, static_cast<size_t>(strLen)};
 }
 
-std::map<String, String> Environment::GetEnvironmentVariables()
+std::map<std::u16string, std::u16string> Environment::GetEnvironmentVariables()
 {
     auto strings = std::unique_ptr<WCHAR[], decltype(&FreeEnvironmentStringsW)>(GetEnvironmentStringsW(),
         FreeEnvironmentStringsW);
-    std::map<String, String> ret;
+    std::map<std::u16string, std::u16string> ret;
 
     for (size_t i = 0;; ++i)
     {
@@ -378,12 +382,12 @@ std::map<String, String> Environment::GetEnvironmentVariables()
             continue;
         }
 
-        auto key = String(reinterpret_cast<const char16_t*>(&strings[startKey]), i - startKey);
+        auto key = std::u16string(reinterpret_cast<const char16_t*>(&strings[startKey]), i - startKey);
         auto startValue = ++i;
         while (strings[i] != L'\0')
             ++i;
 
-        ret[std::move(key)] = String(reinterpret_cast<const char16_t*>(&strings[startValue]), i - startValue);
+        ret[std::move(key)] = std::u16string(reinterpret_cast<const char16_t*>(&strings[startValue]), i - startValue);
     }
 
     return ret;
@@ -391,7 +395,8 @@ std::map<String, String> Environment::GetEnvironmentVariables()
 
 OperatingSystem Environment::GetOSVersion()
 {
-    OSVERSIONINFOEX vi {
+    OSVERSIONINFOEX vi
+    {
         vi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX)
     };
     GetVersionExW(reinterpret_cast<OSVERSIONINFO*>(&vi));
@@ -411,8 +416,9 @@ bool Environment::GetUserInteractive()
     if (windowStationHandle && windowStationHandle != cachedWindowStationHandle)
     {
         USEROBJECTFLAGS flags;
-        DWORD needLength;
-        if (GetUserObjectInformationW(windowStationHandle, UOI_FLAGS, reinterpret_cast<PVOID>(&flags), sizeof(flags), &needLength) == TRUE)
+        DWORD lengthNeeded;
+        if (GetUserObjectInformationW(windowStationHandle, UOI_FLAGS, reinterpret_cast<PVOID>(&flags), sizeof(flags),
+            &lengthNeeded) == TRUE)
         {
             if ((flags.dwFlags & WSF_VISIBLE) == 0)
                 isUserNonInteractive = true;

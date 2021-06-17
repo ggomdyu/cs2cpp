@@ -20,9 +20,7 @@ std::optional<struct _stat> CreateStat(std::u16string_view path)
 {
     struct _stat s {};
     if (_wstat(reinterpret_cast<const wchar_t*>(path.data()), &s) != 0)
-    {
         return {};
-    }
 
     return s;
 }
@@ -30,39 +28,29 @@ std::optional<struct _stat> CreateStat(std::u16string_view path)
 bool InternalRecursiveDelete(std::wstring& strBuffer)
 {
     if (!Path::IsDirectorySeparator(strBuffer[strBuffer.length() - 1]))
-    {
         strBuffer.push_back(Path::DirectorySeparatorChar);
-    }
 
     strBuffer.push_back(u'*');
 
     WIN32_FIND_DATAW findData;
     const SafeFindHandle handle(FindFirstFileW(strBuffer.data(), &findData));
     if (handle == nullptr)
-    {
         return false;
-    }
 
     do
     {
         // Ignore the . and ..
         if (findData.cFileName[0] == L'.' && (findData.cFileName[1] == L'\0' ||
             (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
-        {
             continue;
-        }
 
         auto filenameLen = std::char_traits<wchar_t>::length(findData.cFileName);
         strBuffer += std::wstring_view(findData.cFileName, filenameLen);
 
         if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-        {
             InternalRecursiveDelete(strBuffer);
-        }
         else
-        {
             DeleteFileW(strBuffer.data());
-        }
 
         strBuffer.erase(filenameLen);
     } while (FindNextFileW(handle, &findData) == TRUE);
@@ -76,9 +64,7 @@ bool Directory::Delete(std::u16string_view path, bool recursive)
 {
     auto s = detail::directory::CreateStat(path);
     if (!s.has_value() || !detail::directory::S_ISDIR(s->st_mode))
-    {
         return false;
-    }
 
     if (recursive)
     {
@@ -93,25 +79,21 @@ bool Directory::Exists(std::u16string_view path)
 {
     auto s = detail::directory::CreateStat(path);
     if (!s.has_value() || !detail::directory::S_ISDIR(s->st_mode))
-    {
         return false;
-    }
 
     return true;
 }
 
-std::vector<String> Directory::GetLogicalDrives()
+std::vector<std::u16string> Directory::GetLogicalDrives()
 {
     const auto driveFlags = ::GetLogicalDrives();
 
-    std::vector<String> ret;
+    std::vector<std::u16string> ret;
     char16_t root[] = u"A:\\";
     for (auto d = driveFlags; d != 0; d >>= 1)
     {
         if ((d & 1) != 0)
-        {
             ret.emplace_back(root, static_cast<int32_t>(std::extent_v<decltype(root)>) - 1);
-        }
 
         ++root[0];
     }
@@ -123,9 +105,7 @@ bool Directory::Move(std::u16string_view srcPath, std::u16string_view destPath)
 {
     auto s = detail::directory::CreateStat(srcPath);
     if (!s.has_value() || !detail::directory::S_ISDIR(s->st_mode))
-    {
         return false;
-    }
 
     return _wrename(reinterpret_cast<const wchar_t*>(srcPath.data()), reinterpret_cast<const wchar_t*>(destPath.data())) == 0;
 }
@@ -135,10 +115,10 @@ bool Directory::SetCurrentDirectory(std::u16string_view path)
     return SetCurrentDirectoryW(reinterpret_cast<const wchar_t*>(path.data())) == TRUE;
 }
 
-String Directory::GetCurrentDirectory()
+std::u16string Directory::GetCurrentDirectory()
 {
-    const auto strLen = GetCurrentDirectoryW(static_cast<DWORD>(GlobalWideCharBuffer.size()), GlobalWideCharBuffer.data());
-    return String(reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data()), static_cast<int32_t>(strLen));
+    auto strLen = GetCurrentDirectoryW(static_cast<DWORD>(GlobalWideCharBuffer.size()), GlobalWideCharBuffer.data());
+    return {reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data()), static_cast<size_t>(strLen)};
 }
 
 bool Directory::InternalCreateDirectory(std::u16string_view path)

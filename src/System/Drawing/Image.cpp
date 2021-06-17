@@ -117,7 +117,7 @@ void RotateRGBAImageRight90Degrees(std::byte* imageData, int32_t width, int32_t 
         return;
 
     using Color4b = uint32_t;
-    auto imageDataSize = static_cast<int64_t>(width) * height * 4;
+    auto imageDataSize = static_cast<size_t>(width * height) * 4;
     auto tempBuffer = std::make_unique<std::byte[]>(imageDataSize);
 
     auto* srcRow = reinterpret_cast<Color4b*>(imageData);

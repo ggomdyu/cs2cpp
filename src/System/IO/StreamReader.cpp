@@ -1,3 +1,5 @@
+#include <cassert>
+
 #include "System/IO/StreamReader.h"
 #include "System/IO/FileStream.h"
 
@@ -191,7 +193,7 @@ int32_t StreamReader::ReadBuffer()
 
 bool StreamReader::DetectPreamble(const Encoding& encoding, int32_t readByteCount)
 {
-    if (readByteCount < encoding.GetPreamble().size())
+    if (static_cast<size_t>(readByteCount) < encoding.GetPreamble().size())
         return false;
 
     decltype(auto) byteBuffer = GetByteBuffer();

@@ -152,19 +152,19 @@ std::optional<DateTime> File::GetLastWriteTimeUtc(std::u16string_view path)
     return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_mtime);
 }
 
-SafeFilePointer File::InternalFileOpen(std::u16string_view path, std::u16string_view mode)
-{
-    SafeFilePointer fp;
-    _wfopen_s(fp, reinterpret_cast<const wchar_t*>(path.data()), reinterpret_cast<const wchar_t*>(mode.data()));
-
-    return std::move(fp);
-}
-
 bool File::Replace(std::u16string_view srcPath, std::u16string_view destPath, const std::u16string_view* destBackupPath, bool ignoreMetadataErrors)
 {
     return ReplaceFileW(reinterpret_cast<const wchar_t*>(&destPath[0]), reinterpret_cast<const wchar_t*>(&srcPath[0]),
         destBackupPath ? reinterpret_cast<const wchar_t*>(&destBackupPath[0]) : nullptr,
         ignoreMetadataErrors ? REPLACEFILE_IGNORE_MERGE_ERRORS : 0, nullptr, nullptr);
+}
+
+SafeFilePointer File::InternalFileOpen(std::u16string_view path, std::u16string_view mode)
+{
+    FILE* fp;
+    _wfopen_s(&fp, reinterpret_cast<const wchar_t*>(path.data()), reinterpret_cast<const wchar_t*>(mode.data()));
+
+    return SafeFilePointer(fp);
 }
 
 CS2CPP_NAMESPACE_END

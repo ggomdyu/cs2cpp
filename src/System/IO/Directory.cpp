@@ -9,7 +9,7 @@ DirectoryInfo Directory::CreateDirectory(std::u16string_view path)
     if (fullPath.length() > 0 && !Path::IsDirectorySeparator(fullPath[fullPath.length() - 1]))
         fullPath += Path::DirectorySeparatorChar;
 
-    for (int32_t i = Path::IsDirectorySeparator(fullPath[0]) ? 1 : 0; i < fullPath.length(); ++i)
+    for (size_t i = Path::IsDirectorySeparator(fullPath[0]) ? 1 : 0; i < fullPath.length(); ++i)
     {
         auto c = fullPath[i];
         if (Path::IsDirectorySeparator(c))

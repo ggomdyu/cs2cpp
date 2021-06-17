@@ -10,9 +10,9 @@ TimeZoneInfo TimeZoneInfo::CreateLocal()
     auto isSupportDaylightSavingTime = GetDynamicTimeZoneInformation(&tzi) != TIME_ZONE_ID_UNKNOWN;
     auto baseUtcOffset = TimeSpan(TimeSpan::TicksPerMinute * -tzi.Bias);
 
-    auto id = String(reinterpret_cast<const char16_t*>(tzi.TimeZoneKeyName))
-    auto standardName = String(reinterpret_cast<const char16_t*>(tzi.StandardName));
-    auto daylightDisplayName = String(reinterpret_cast<const char16_t*>(tzi.DaylightName);
+    auto id = std::u16string(reinterpret_cast<const char16_t*>(tzi.TimeZoneKeyName));
+    auto standardName = std::u16string(reinterpret_cast<const char16_t*>(tzi.StandardName));
+    auto daylightDisplayName = std::u16string(reinterpret_cast<const char16_t*>(tzi.DaylightName));
 
     return TimeZoneInfo(std::move(id), baseUtcOffset, standardName, standardName, std::move(daylightDisplayName),
         isSupportDaylightSavingTime);
