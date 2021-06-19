@@ -1,5 +1,6 @@
 #include "System/IO/Directory.h"
 #include "System/IO/File.h"
+#include "System/IO/Path.h"
 
 CS2CPP_NAMESPACE_BEGIN
 
@@ -99,8 +100,7 @@ std::optional<DateTime> Directory::GetLastWriteTimeUtc(std::u16string_view path)
 
 std::u16string Directory::GetDirectoryRoot(std::u16string_view path)
 {
-    auto fullPath = Path::GetFullPath(path);
-    return fullPath.substr(0, Path::GetRootLength(fullPath));
+    return Path::GetPathRoot(Path::GetFullPath(path));
 }
 
 std::vector<std::u16string> Directory::GetDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)

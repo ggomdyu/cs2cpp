@@ -1,10 +1,7 @@
 #include <gtest/gtest.h>
 #include <System/DateTime.h>
 
-using tg::DateTime;
-using tg::DateTimeKind;
-using tg::DayOfWeek;
-using tg::TimeSpan;
+using namespace tg;
 
 TEST(DateTime, OperatorAdd)
 {

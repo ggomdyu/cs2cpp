@@ -32,44 +32,45 @@ constexpr gsl::span<const char16_t> Path::GetInvalidPathChars() noexcept
     return invalidPathChars;
 }
 
-constexpr std::u16string_view Path::GetPathRoot(std::u16string_view path) noexcept
-{
-    //int len = 2;
-
-    //if (path.Length == 1 && IsDirectorySeparator (path [0]))
-    //    return DirectorySeparatorStr;
-    //else if (path.Length < 2)
-    //    return String.Empty;
-
-    //if (IsDirectorySeparator (path [0]) && IsDirectorySeparator (path[1])) {
-    //    // UNC: \\server or \\server\share
-    //    // Get server
-    //    while (len < path.Length && !IsDirectorySeparator (path [len])) len++;
-
-    //    // Get share
-    //    if (len < path.Length) {
-    //        len++;
-    //        while (len < path.Length && !IsDirectorySeparator (path [len])) len++;
-    //    }
-
-    //    return DirectorySeparatorStr +
-    //        DirectorySeparatorStr +
-    //        path.Substring (2, len - 2).Replace (AltDirectorySeparatorChar, DirectorySeparatorChar);
-    //} else if (IsDirectorySeparator (path [0])) {
-    //    // path starts with '\' or '/'
-    //    return DirectorySeparatorStr;
-    //} else if (path[1] == VolumeSeparatorChar) {
-    //    // C:\folder
-    //    if (path.Length >= 3 && (IsDirectorySeparator (path [2]))) len++;
-    //} else
-    //    return Directory.GetCurrentDirectory ().Substring (0, 2);// + path.Substring (0, len);
-    //return path.Substring (0, len);
-    return u"";
-}
-
 constexpr int32_t Path::GetRootLength(std::u16string_view path) noexcept
 {
-    return path.length() > 0 && IsDirectorySeparator(path[0]) ? 1 : 0;
+    if (path.length() <= 1)
+        return path.length() == 1 && IsDirectorySeparator(path[0]) ? 1 : 0;
+
+    int32_t len = 2;
+    if (IsDirectorySeparator(path[0]))
+    {
+        // Check for \\server or \\server\share
+        if (IsDirectorySeparator(path[1]))
+        {
+            // Get \\server
+            while (len < path.length() && !IsDirectorySeparator(path[len]))
+                ++len;
+
+            // Get \share
+            if (len < path.length())
+            {
+                ++len;
+                while (len < path.length() && !IsDirectorySeparator(path[len]))
+                    ++len;
+            }
+        }
+        else
+        {
+            // The path starts with '\' or '/'.
+            return 1;
+        }
+    }
+    else if (path[1] == VolumeSeparatorChar)
+    {
+        // The path starts with "C:/" or "C:\\".
+        if (path.length() >= 3 && IsDirectorySeparator(path[2]))
+            ++len;
+    }
+    else
+        return 0;
+
+    return len;
 }
 
 CS2CPP_NAMESPACE_END

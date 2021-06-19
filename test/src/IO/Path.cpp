@@ -36,10 +36,24 @@ TEST(Path, Combine)
 #endif
 }
 
+TEST(Path, IsPathRooted)
+{
+#if CS2CPP_PLATFORM_WINDOWS
+    EXPECT_TRUE(Path::IsPathRooted(u"C:\\Temp"));
+    EXPECT_TRUE(Path::IsPathRooted(u"C:/Temp"));
+#else
+    EXPECT_FALSE(Path::IsPathRooted(u"C:\\Temp"));
+    EXPECT_FALSE(Path::IsPathRooted(u"C:/Temp"));
+#endif
+    EXPECT_TRUE(Path::IsPathRooted(u"/User/Temp"));
+    EXPECT_FALSE(Path::IsPathRooted(u"User/Temp"));
+    EXPECT_FALSE(Path::IsPathRooted(u"User"));
+}
+
 TEST(Path, GetExtension)
 {
-    EXPECT_EQ(Path::GetExtension(u"/Users/chajunho/Desktop/1.png"), u".png");
-    EXPECT_EQ(Path::GetExtension(u"/Users/chajunho/Desktop/1"), u"");
+    EXPECT_EQ(Path::GetExtension(u"/users/desktop/1.png"), u".png");
+    EXPECT_EQ(Path::GetExtension(u"/users/desktop/1"), u"");
     EXPECT_EQ(Path::GetExtension(u"1.png"), u".png");
     EXPECT_EQ(Path::GetExtension(u"1"), u"");
     EXPECT_EQ(Path::GetExtension(u""), u"");
@@ -47,52 +61,66 @@ TEST(Path, GetExtension)
 
 TEST(Path, GetFileName)
 {
-    EXPECT_EQ(Path::GetFileName(u"/Users/chajunho/Desktop/1.png"), u"1.png");
+    EXPECT_EQ(Path::GetFileName(u"/users/desktop/1.png"), u"1.png");
     EXPECT_EQ(Path::GetFileName(u""), u"");
 }
 
 TEST(Path, GetFileNameWithoutExtension)
 {
     EXPECT_EQ(Path::GetFileNameWithoutExtension(u""), u"");
-    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/Users/chajunho/Desktop/123"), u"123");
+    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/users/desktop/123"), u"123");
     EXPECT_EQ(Path::GetFileNameWithoutExtension(u"123123"), u"123123");
     EXPECT_EQ(Path::GetFileNameWithoutExtension(u"1"), u"1");
     EXPECT_EQ(Path::GetFileNameWithoutExtension(u"1.png"), u"1");
-    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/Users/chajunho/Desktop/1"), u"1");
-    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/Users/chajunho/Desktop/1.png"), u"1");
-    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/Users/chajunho/Desktop/1.1.png"), u"1.1");
-    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/Users/chajunho/Desktop/1.1.png"), u"1.1");
+    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/users/desktop/1"), u"1");
+    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/users/desktop/1.png"), u"1");
+    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/users/desktop/1.1.png"), u"1.1");
+    EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/users/desktop/1.1.png"), u"1.1");
     EXPECT_EQ(Path::GetFileNameWithoutExtension(u"/Users/123123.png"), u"123123");
 }
 
 TEST(Path, GetDirectoryName)
 {
-    EXPECT_EQ(Path::GetDirectoryName(u"C:/1.png"), u"C:");
-    EXPECT_EQ(Path::GetDirectoryName(u"C:\\1.png"), u"");
-    EXPECT_EQ(Path::GetDirectoryName(u"C:/Dir/1.png"), u"C:/Dir");
-    EXPECT_EQ(Path::GetDirectoryName(u"/Users/chajunho/Desktop/1.png"), u"/Users/chajunho/Desktop");
-    EXPECT_EQ(Path::GetDirectoryName(u""), u"");
+#if CS2CPP_PLATFORM_WINDOWS
+    EXPECT_EQ(Path::GetDirectoryName(u"C:/1.png"), u"C:\\");
+    EXPECT_EQ(Path::GetDirectoryName(u"C:\\1.png"), u"C:\\");
+    EXPECT_EQ(Path::GetDirectoryName(u"C:/dir/1.png"), u"C:\\dir");
+    EXPECT_EQ(Path::GetDirectoryName(u"C:\\dir/1.png"), u"C:\\dir");
+    EXPECT_EQ(Path::GetDirectoryName(u"/users/desktop/1.png"), u"\\users\\desktop");
+    EXPECT_EQ(Path::GetDirectoryName(u"/users\\desktop\\1.png"), u"\\users\\desktop");
     EXPECT_EQ(Path::GetDirectoryName(u"abc.png"), u"");
     EXPECT_EQ(Path::GetDirectoryName(u"abc"), u"");
+    EXPECT_EQ(Path::GetDirectoryName(u""), u"");
+#else
+    EXPECT_EQ(Path::GetDirectoryName(u"C:/1.png"), u"C:");
+    EXPECT_EQ(Path::GetDirectoryName(u"C:\\1.png"), u"");
+    EXPECT_EQ(Path::GetDirectoryName(u"C:/dir/1.png"), u"C:/dir");
+    EXPECT_EQ(Path::GetDirectoryName(u"C:\\dir/1.png"), u"C:\\dir");
+    EXPECT_EQ(Path::GetDirectoryName(u"/users/desktop/1.png"), u"/users/desktop");
+    EXPECT_EQ(Path::GetDirectoryName(u"/users\\desktop\\1.png"), u"/");
+    EXPECT_EQ(Path::GetDirectoryName(u"abc.png"), u"");
+    EXPECT_EQ(Path::GetDirectoryName(u"abc"), u"");
+    EXPECT_EQ(Path::GetDirectoryName(u""), u"");
+#endif
 }
 
 TEST(Path, HasExtension)
 {
-    EXPECT_EQ(Path::HasExtension(u"/Users/chajunho/Desktop/1.png"), true);
-    EXPECT_EQ(Path::HasExtension(u"/Users/chajunho/Desktop/1"), false);
-    EXPECT_EQ(Path::HasExtension(u"/Users/chajunho/Desktop/"), false);
-    EXPECT_EQ(Path::HasExtension(u"/Users/chajunho/Desktop"), false);
-    EXPECT_EQ(Path::HasExtension(u"1.png"), true);
-    EXPECT_EQ(Path::HasExtension(u".png"), true);
-    EXPECT_EQ(Path::HasExtension(u"png"), false);
+    EXPECT_TRUE(Path::HasExtension(u"/users/desktop/1.png"));
+    EXPECT_FALSE(Path::HasExtension(u"/users/desktop/1"));
+    EXPECT_FALSE(Path::HasExtension(u"/users/desktop/"));
+    EXPECT_FALSE(Path::HasExtension(u"/users/desktop"));
+    EXPECT_TRUE(Path::HasExtension(u"1.png"));
+    EXPECT_TRUE(Path::HasExtension(u".png"));
+    EXPECT_FALSE(Path::HasExtension(u"png"));
 }
 
 TEST(Path, ChangeExtension)
 {
-    EXPECT_EQ(Path::ChangeExtension(u"/Users/chajunho/Desktop/1.png", u"ext"), u"/Users/chajunho/Desktop/1.ext");
+    EXPECT_EQ(Path::ChangeExtension(u"/users/desktop/1.png", u"ext"), u"/users/desktop/1.ext");
     EXPECT_EQ(Path::ChangeExtension(u".png", u"ext"), u".ext");
-    EXPECT_EQ(Path::ChangeExtension(u"/Users/chajunho/Desktop", u"ext"), u"/Users/chajunho/Desktop.ext");
-    EXPECT_EQ(Path::ChangeExtension(u"/Users/chajunho/Desktop/", u"ext"), u"/Users/chajunho/Desktop/.ext");
+    EXPECT_EQ(Path::ChangeExtension(u"/users/desktop", u"ext"), u"/users/desktop.ext");
+    EXPECT_EQ(Path::ChangeExtension(u"/users/desktop/", u"ext"), u"/users/desktop/.ext");
     EXPECT_EQ(Path::ChangeExtension(u"1.png", u"ext"), u"1.ext");
     EXPECT_EQ(Path::ChangeExtension(u"png", u"ext"), u"png.ext");
     EXPECT_EQ(Path::ChangeExtension(u"", u"ext"), u"");
@@ -105,43 +133,53 @@ TEST(Path, ChangeExtension)
 
 TEST(Path, GetFullPath)
 {
-    EXPECT_EQ(Path::GetFullPath(u""), u"");
+#if CS2CPP_PLATFORM_WINDOWS
+
+#else
     EXPECT_EQ(Path::GetFullPath(u"/"), u"/");
+#endif
+    EXPECT_EQ(Path::GetFullPath(u""), u"");
 }
 
 TEST(Path, GetPathRoot)
 {
-    EXPECT_EQ(Path::GetPathRoot(u"/Users/chajunho/"), u"/");
-    EXPECT_EQ(Path::GetPathRoot(u"/"), u"/");
-    EXPECT_EQ(Path::GetPathRoot(u"/Users"), u"/");
-    EXPECT_EQ(Path::GetPathRoot(u""), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"C:/"), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"C:"), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"C://"), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"C:\\"), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"\\Users\\chajunho\\"), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"\\"), u"");
 #if CS2CPP_PLATFORM_WINDOWS
-    EXPECT_EQ(Path::GetPathRoot(u"/Users/chajunho/"), u"\\");
-    EXPECT_EQ(Path::GetPathRoot(u"/"), u"\\");
-    EXPECT_EQ(Path::GetPathRoot(u"/Users"), u"\\");
-    EXPECT_EQ(Path::GetPathRoot(u""), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"C:\\user/temp"), u"C:\\");
+    EXPECT_EQ(Path::GetPathRoot(u"C:/user/temp"), u"C:\\");
+    EXPECT_EQ(Path::GetPathRoot(u"C:/a"), u"C:\\");
     EXPECT_EQ(Path::GetPathRoot(u"C:/"), u"C:\\");
     EXPECT_EQ(Path::GetPathRoot(u"C:"), u"C:");
-    EXPECT_EQ(Path::GetPathRoot(u"C://"), u"C:\\");
-    EXPECT_EQ(Path::GetPathRoot(u"C:\\"), u"C:\\");
-    EXPECT_EQ(Path::GetPathRoot(u"\\Users\\chajunho\\"), u"\\");
-    EXPECT_EQ(Path::GetPathRoot(u"\\"), u"\\");
-#elif CS2CPP_PLATFORM_MACOS
-    EXPECT_EQ(Path::GetPathRoot(u"/Users/chajunho/"), u"/");
-    EXPECT_EQ(Path::GetPathRoot(u"/"), u"/");
-    EXPECT_EQ(Path::GetPathRoot(u"/Users"), u"/");
-    EXPECT_EQ(Path::GetPathRoot(u""), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"user/temp"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"user/temp/image.png"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"/user/temp"), u"\\");
+    EXPECT_EQ(Path::GetPathRoot(u"//user/temp"), u"\\\\user\\temp");
+    EXPECT_EQ(Path::GetPathRoot(u"//user/temp/image.png"), u"\\\\user\\temp");
+    EXPECT_EQ(Path::GetPathRoot(u"\\User\\temp"), u"\\");
+    EXPECT_EQ(Path::GetPathRoot(u"\\volume/temp"), u"\\");
+    EXPECT_EQ(Path::GetPathRoot(u"\\\\volume\\temp\\"), u"\\\\volume\\temp");
+    EXPECT_EQ(Path::GetPathRoot(u"\\\\volume\\temp\\temp\\image.png"), u"\\\\volume\\temp");
+#else
+    EXPECT_EQ(Path::GetPathRoot(u"C:\\user/temp"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"C:/user/temp"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"C:/a"), u"");
     EXPECT_EQ(Path::GetPathRoot(u"C:/"), u"");
     EXPECT_EQ(Path::GetPathRoot(u"C:"), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"C://"), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"C:\\"), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"\\Users\\chajunho\\"), u"");
-    EXPECT_EQ(Path::GetPathRoot(u"\\"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"user/temp"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"user/temp/image.png"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"/user/temp"), u"/");
+    EXPECT_EQ(Path::GetPathRoot(u"//user/temp"), u"/");
+    EXPECT_EQ(Path::GetPathRoot(u"\\User\\temp"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"\\volume/temp"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"\\\\volume\\temp\\"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"\\\\volume\\temp\\temp\\image.png"), u"");
 #endif
+    EXPECT_EQ(Path::GetPathRoot(u"user"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u"user/temp"), u"");
+}
+
+TEST(Path, GetRandomFileName)
+{
+    auto filename = Path::GetRandomFileName();
+    for (size_t j = 0; j < filename.size(); ++j)
+        EXPECT_PRED1([j](auto&& c) { return j == 8 ? c == '.' : isalpha(c) || isdigit(c); }, filename[j]);
 }

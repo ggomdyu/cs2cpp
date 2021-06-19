@@ -29,7 +29,7 @@ private:
 public:
     Encoding(const Encoding& rhs) = delete;
     Encoding(Encoding&& rhs) noexcept = default;
-    ~Encoding();
+    ~Encoding() = default;
 
 public:
     Encoding& operator=(const Encoding& rhs) = delete;
@@ -80,7 +80,7 @@ private:
     std::unique_ptr<UConverter, decltype(&ucnv_close)> _converter;
     std::u16string _encodingName;
     gsl::span<const std::byte> _preamble{};
-    inline static std::unordered_map<int32_t, Encoding> _encodingTable;
+    inline static std::unordered_map<int32_t, Encoding> _encodings;
 };
 
 CS2CPP_NAMESPACE_END

@@ -317,10 +317,6 @@ Encoding::Encoding(UConverter* converter) :
     SetDefaultFallback();
 }
 
-Encoding::~Encoding()
-{
-}
-
 bool Encoding::operator==(const Encoding& rhs) const noexcept
 {
     return _converter == rhs._converter;
@@ -351,15 +347,15 @@ std::optional<Encoding> Encoding::Create(std::u16string_view encodingName)
 
 const Encoding* Encoding::GetEncoding(int32_t codePage)
 {
-    auto it = _encodingTable.find(codePage);
-    if (it != _encodingTable.cend())
+    auto it = _encodings.find(codePage);
+    if (it != _encodings.cend())
         return &it->second;
 
     auto encoding = Encoding::Create(codePage);
     if (!encoding)
         return nullptr;
 
-    return &_encodingTable.insert(it, {codePage, std::move(encoding.value())})->second;
+    return &_encodings.insert(it, {codePage, std::move(encoding.value())})->second;
 }
 
 const Encoding* Encoding::GetEncoding(std::u16string_view encodingName)

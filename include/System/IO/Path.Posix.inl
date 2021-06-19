@@ -14,14 +14,9 @@ constexpr gsl::span<const char16_t> Path::GetInvalidPathChars() noexcept
     return invalidPathChars;
 }
 
-constexpr std::u16string_view Path::GetPathRoot(std::u16string_view path) noexcept
-{
-    return IsDirectorySeparator(path[0]) ? DirectorySeparatorStr : std::u16string_view();
-}
-
 constexpr int32_t Path::GetRootLength(std::u16string_view path) noexcept
 {
-    return path.length() > 0 && Path::IsDirectorySeparator(path[0]) ? 1 : 0;
+    return path.length() > 0 && IsDirectorySeparator(path[0]) ? 1 : 0;
 }
 
 CS2CPP_NAMESPACE_END

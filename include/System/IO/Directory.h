@@ -4,8 +4,7 @@
 #include <vector>
 
 #include "System/DateTime.h"
-
-#include "DirectoryInfo.h"
+#include "System/IO/DirectoryInfo.h"
 
 CS2CPP_NAMESPACE_BEGIN
 

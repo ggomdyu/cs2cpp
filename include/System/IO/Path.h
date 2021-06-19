@@ -11,7 +11,7 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-class Path :
+class Path final :
     private PlatformPath
 {
     friend class Directory;
@@ -25,12 +25,12 @@ public:
     [[nodiscard]] static constexpr std::u16string_view GetExtension(std::u16string_view path) noexcept;
     [[nodiscard]] static constexpr std::u16string_view GetFileName(std::u16string_view path) noexcept;
     [[nodiscard]] static constexpr std::u16string_view GetFileNameWithoutExtension(std::u16string_view path) noexcept;
-    [[nodiscard]] static constexpr std::u16string_view GetDirectoryName(std::u16string_view path) noexcept;
-    [[nodiscard]] static constexpr bool HasExtension(std::u16string_view path) noexcept;
+    [[nodiscard]] static std::u16string GetDirectoryName(std::u16string_view path);
     [[nodiscard]] static std::u16string ChangeExtension(std::u16string_view path, std::u16string_view extension);
+    [[nodiscard]] static constexpr bool HasExtension(std::u16string_view path) noexcept;
     [[nodiscard]] static std::u16string GetFullPath(std::u16string_view path);
     [[nodiscard]] static std::u16string GetFullPath(std::u16string_view path, std::u16string_view basePath);
-    [[nodiscard]] static constexpr std::u16string_view GetPathRoot(std::u16string_view path) noexcept;
+    [[nodiscard]] static std::u16string GetPathRoot(std::u16string_view path);
     [[nodiscard]] static std::u16string GetRandomFileName();
     [[nodiscard]] static std::u16string GetTempPath();
     [[nodiscard]] static constexpr gsl::span<const char16_t> GetInvalidFileNameChars() noexcept;
@@ -55,8 +55,8 @@ private:
 
 constexpr bool Path::IsPathRooted(std::u16string_view path) noexcept
 {
-    return (path.length() >= 1 && IsDirectorySeparator(path[0])) ||
-        (path.length() >= 2 && IsValidDriveChar(path[0]) && path[1] == VolumeSeparatorChar);
+    return (path.length() >= 1 && IsDirectorySeparator(path[0]))
+        || (path.length() >= 2 && IsValidDriveChar(path[0]) && path[1] == VolumeSeparatorChar);
 }
 
 constexpr std::u16string_view Path::GetExtension(std::u16string_view path) noexcept
@@ -101,18 +101,6 @@ constexpr std::u16string_view Path::GetFileNameWithoutExtension(std::u16string_v
     }
 
     return path;
-}
-
-constexpr std::u16string_view Path::GetDirectoryName(std::u16string_view path) noexcept
-{
-    auto index = path.length();
-    while (index-- > 0)
-    {
-        if (IsDirectorySeparator(path[index]))
-            return path.substr(0, index);
-    }
-
-    return {};
 }
 
 constexpr bool Path::HasExtension(std::u16string_view path) noexcept

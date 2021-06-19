@@ -36,7 +36,7 @@ public:
     virtual R Invoke(Ts... args) const = 0;
     virtual void CopyTo(Functor* functor) const = 0;
     virtual void Destroy() = 0;
-    virtual size_t GetSize() const noexcept = 0;
+    [[nodiscard]] virtual size_t GetSize() const noexcept = 0;
 };
 
 template <typename F, typename R, typename... Ts>
@@ -53,7 +53,7 @@ public:
     R Invoke(Ts... args) const override;
     void CopyTo(Functor<R, Ts...>* functor) const override;
     void Destroy() override;
-    size_t GetSize() const noexcept override;
+    [[nodiscard]] size_t GetSize() const noexcept override;
 
 private:
     Storage _storage;

@@ -2,7 +2,6 @@
 
 #include "System/Environment.h"
 #include "System/IO/Directory.h"
-#include "System/IO/Path.h"
 #include "System/Random.h"
 
 CS2CPP_NAMESPACE_BEGIN
@@ -17,8 +16,10 @@ std::u16string Path::Combine(std::u16string_view path1, std::u16string_view path
 
     auto path1Separator = path1[path1.length() - 1];
     auto path2Separator = path2[0];
-    auto hasSeparator = (path1Separator == DirectorySeparatorChar) || (path1Separator == AltDirectorySeparatorChar)
-        || (path2Separator == DirectorySeparatorChar) || (path2Separator == AltDirectorySeparatorChar);
+    auto hasSeparator = (path1Separator == DirectorySeparatorChar)
+        || (path1Separator == AltDirectorySeparatorChar)
+        || (path2Separator == DirectorySeparatorChar)
+        || (path2Separator == AltDirectorySeparatorChar);
 
     std::u16string ret;
     ret.reserve(path1.length() + path2.length() + (hasSeparator ? 0 : 1));
@@ -82,19 +83,7 @@ std::u16string Path::GetRandomFileName()
 
     buffer[8] = u'.';
 
-    return std::u16string(buffer.data(), buffer.size());
-}
-
-std::u16string Path::GetTempPath()
-{
-    auto tempEnvVarValue = Environment::GetEnvironmentVariable(u"TMPDIR");
-    if (!tempEnvVarValue)
-        return u"/tmp/";
-
-    if (!IsDirectorySeparator((*tempEnvVarValue)[tempEnvVarValue->length() - 1]))
-        (*tempEnvVarValue) += DirectorySeparatorChar;
-
-    return std::move(*tempEnvVarValue);
+    return {buffer.data(), buffer.size()};
 }
 
 std::u16string Path::RemoveRelativeSegments(std::u16string_view path)

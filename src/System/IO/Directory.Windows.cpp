@@ -33,8 +33,8 @@ bool InternalRecursiveDelete(std::wstring& strBuffer)
     strBuffer.push_back(u'*');
 
     WIN32_FIND_DATAW findData;
-    const SafeFindHandle handle(FindFirstFileW(strBuffer.data(), &findData));
-    if (handle == nullptr)
+    SafeFindHandle handle(FindFirstFileW(strBuffer.data(), &findData));
+    if (!handle)
         return false;
 
     do
@@ -86,7 +86,7 @@ bool Directory::Exists(std::u16string_view path)
 
 std::vector<std::u16string> Directory::GetLogicalDrives()
 {
-    const auto driveFlags = ::GetLogicalDrives();
+    auto driveFlags = ::GetLogicalDrives();
 
     std::vector<std::u16string> ret;
     char16_t root[] = u"A:\\";
