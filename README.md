@@ -1,6 +1,6 @@
 # cs2cpp
-[![Windows](https://github.com/ggomdyu/cs2cpp/actions/workflows/Windows.yml/badge.svg)](https://github.com/ggomdyu/cs2cpp/actions/workflows/Windows.yml)
-[![MacOS](https://github.com/ggomdyu/cs2cpp/actions/workflows/MacOS.yml/badge.svg)](https://github.com/ggomdyu/cs2cpp/actions/workflows/MacOS.yml)
+[![windows-latest](https://github.com/ggomdyu/cs2cpp/actions/workflows/windows-latest.yml/badge.svg)](https://github.com/ggomdyu/cs2cpp/actions/workflows/windows-latest.yml)
+[![macos-latest](https://github.com/ggomdyu/cs2cpp/actions/workflows/macos-latest.yml/badge.svg)](https://github.com/ggomdyu/cs2cpp/actions/workflows/macos-latest.yml)
 
 A C++17 based library that provides C# style classes
 
