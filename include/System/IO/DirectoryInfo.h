@@ -23,7 +23,7 @@ public:
     bool MoveTo(std::u16string_view destDirName);
     [[nodiscard]] DirectoryInfo CreateSubdirectory(std::u16string_view path) const;
     [[nodiscard]] bool IsExists() const;
-    [[nodiscard]] std::u16string_view GetName() const noexcept;
+    [[nodiscard]] std::u16string GetName() const noexcept;
     [[nodiscard]] DirectoryInfo GetRoot() const;
     [[nodiscard]] DirectoryInfo GetParent() const;
     [[nodiscard]] std::vector<std::u16string> GetDirectories(std::u16string_view searchPattern = u"*", SearchOption searchOption = SearchOption::TopDirectoryOnly) const;

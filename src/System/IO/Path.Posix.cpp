@@ -1,4 +1,4 @@
-#include "System/Environment.h.h"
+#include "System/Environment.h"
 #include "System/IO/Path.h"
 
 CS2CPP_NAMESPACE_BEGIN
@@ -18,7 +18,7 @@ std::string PosixPath::Combine(std::string_view path1, std::string_view path2)
         || (path2Separator == PosixPath::DirectorySeparatorChar)
         || (path2Separator == PosixPath::AltDirectorySeparatorChar);
 
-    std::u16string ret;
+    std::string ret;
     ret.reserve(path1.length() + path2.length() + (hasSeparator ? 0 : 1));
     ret += path1;
 
@@ -41,7 +41,7 @@ std::u16string Path::GetDirectoryName(std::u16string_view path)
 
 std::u16string Path::GetPathRoot(std::u16string_view path)
 {
-    return IsDirectorySeparator(path[0]) ? DirectorySeparatorStr : std::u16string_view();
+    return IsDirectorySeparator(path[0]) ? DirectorySeparatorStr : std::u16string();
 }
 
 std::u16string Path::GetTempPath()

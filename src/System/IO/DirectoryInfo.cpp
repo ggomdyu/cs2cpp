@@ -18,7 +18,7 @@ bool DirectoryInfo::IsExists() const
     return Directory::Exists(&_fullPath[0]);
 }
 
-std::u16string_view DirectoryInfo::GetName() const noexcept
+std::u16string DirectoryInfo::GetName() const noexcept
 {
     return Path::GetDirectoryName(_fullPath);
 }
