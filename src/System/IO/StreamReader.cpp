@@ -224,15 +224,14 @@ void StreamReader::DetectEncoding(int32_t readByteCount)
     // refresh _charBuffer and _encoding, etc.
     if (newEncoding->GetCodePage() != _encoding.GetCodePage())
     {
-        auto newMaxCharsPerBuffer = newEncoding->GetMaxCharCount(byteBuffer.size());
+        auto newMaxCharsPerBuffer = newEncoding->GetMaxCharCount(static_cast<int32_t>(byteBuffer.size()));
         _charBuffer.resize(static_cast<size_t>(newMaxCharsPerBuffer) * 2);
-
-        // Remove the byte order mark.
-        if (DetectPreamble(*newEncoding, readByteCount))
-            CompressBuffer(newEncoding->GetPreamble().size());
-
         _encoding = CloneEncoding(*newEncoding);
     }
+
+    // Remove the byte order mark.
+    if (DetectPreamble(*newEncoding, readByteCount))
+        CompressBuffer(static_cast<int32_t>(newEncoding->GetPreamble().size()));
 }
 
 void StreamReader::CompressBuffer(int32_t offset)

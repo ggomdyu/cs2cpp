@@ -42,10 +42,10 @@ std::optional<std::u16string> TextReader::ReadLine()
         ret.push_back(c);
     }
 
-    if (ret.size() > 0)
-        return std::optional<std::u16string>(std::move(ret));
+    if (ret.empty())
+        return {};
 
-    return {};
+    return std::optional<std::u16string>(std::move(ret));
 }
 
 std::u16string TextReader::ReadToEnd()

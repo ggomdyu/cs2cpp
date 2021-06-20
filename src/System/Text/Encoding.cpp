@@ -264,25 +264,25 @@ constexpr int32_t GetCCSID(std::u16string_view strippedEncodingName) noexcept
 
 constexpr gsl::span<const std::byte> GetByteOrderMark(int32_t codePage) noexcept
 {
-    constexpr std::byte utf8ByteOrderMark[] = {std::byte('\xef'), std::byte('\xbb'), std::byte('\xbf')};
-    constexpr std::byte utf16LEByteOrderMark[] = {std::byte('\xff'), std::byte('\xfe')};
-    constexpr std::byte utf16BEByteOrderMark[] = {std::byte('\xfe'), std::byte('\xff')};
-    constexpr std::byte utf32ByteOrderMark[] = {std::byte('\xff'), std::byte('\xfe'), std::byte(0), std::byte(0)};
+    constexpr std::string_view utf8ByteOrderMark("\xef\xbb\xbf", 3);
+    constexpr std::string_view utf16LEByteOrderMark("\xff\xfe", 2);
+    constexpr std::string_view utf16BEByteOrderMark("\xfe\xff", 2);
+    constexpr std::string_view utf32ByteOrderMark("\xff\xfe\x0\x0", 4);
 
     switch (codePage)
     {
     case CCSID::UTF8:
-        return {utf8ByteOrderMark, std::extent_v<decltype(utf8ByteOrderMark)>};
+        return {reinterpret_cast<const std::byte*>(utf8ByteOrderMark.data()), utf8ByteOrderMark.size()};
 
     case CCSID::UTF16:
     case CCSID::UTF16LE:
-        return {utf16LEByteOrderMark, std::extent_v<decltype(utf16LEByteOrderMark)>};
+        return {reinterpret_cast<const std::byte*>(utf16LEByteOrderMark.data()), utf16LEByteOrderMark.size()};
 
     case CCSID::UTF16BE:
-        return {utf16BEByteOrderMark, std::extent_v<decltype(utf16BEByteOrderMark)>};
+        return {reinterpret_cast<const std::byte*>(utf16BEByteOrderMark.data()), utf16BEByteOrderMark.size()};
 
     case CCSID::UTF32:
-        return {utf32ByteOrderMark, std::extent_v<decltype(utf32ByteOrderMark)>};
+        return {reinterpret_cast<const std::byte*>(utf32ByteOrderMark.data()), utf32ByteOrderMark.size()};
 
     default:
         return {};
