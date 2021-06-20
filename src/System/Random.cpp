@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <ctime>
 #include <memory>
 
@@ -25,7 +26,7 @@
 CS2CPP_NAMESPACE_BEGIN
 
 Random::Random() noexcept :
-    Random(time(nullptr))
+    Random(static_cast<int32_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count()))
 {
 }
 
