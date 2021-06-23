@@ -26,7 +26,7 @@
 CS2CPP_NAMESPACE_BEGIN
 
 Random::Random() noexcept :
-    Random(static_cast<int32_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count()))
+    Random(GenerateSeed())
 {
 }
 
@@ -59,13 +59,14 @@ int32_t Random::Next(int32_t minValue, int32_t maxValue) noexcept
 
 void Random::NextBytes(std::byte* bytes, int32_t count) noexcept
 {
-    for (auto i = 0; i < count; ++i)
-        bytes[i] = std::byte(Next(0, 255));
+    auto endIt = bytes + count;
+    while (bytes != endIt)
+        *(bytes++) = static_cast<std::byte>(Next(0, 256));
 }
 
 void Random::NextBytes(gsl::span<std::byte> bytes) noexcept
 {
-    return NextBytes(bytes.data(), bytes.size());
+    return NextBytes(bytes.data(), static_cast<int32_t>(bytes.size()));
 }
 
 double Random::NextDouble() noexcept
@@ -88,6 +89,12 @@ double Random::Sample() noexcept
     _stateIdx = (_stateIdx + R - 1) & 0x0000001fU;
 
     return double(_state[_stateIdx]) * FACT;
+}
+
+int32_t Random::GenerateSeed() noexcept
+{
+    auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    return static_cast<int32_t>(seed);
 }
 
 CS2CPP_NAMESPACE_END

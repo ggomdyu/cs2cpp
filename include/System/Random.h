@@ -24,6 +24,7 @@ public:
 
 private:
     double Sample() noexcept;
+    static int32_t GenerateSeed() noexcept;
 
 private:
     std::array<unsigned, 32> _state;
