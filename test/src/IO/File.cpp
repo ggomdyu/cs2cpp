@@ -1,8 +1,8 @@
-#include <gtest/gtest.h>
 #include <System/Environment.h>
+#include <System/IO/Directory.h>
 #include <System/IO/File.h>
-#include <System/IO/Path.h>
 #include <System/Random.h>
+#include <gtest/gtest.h>
 
 using namespace tg;
 
@@ -157,6 +157,10 @@ TEST(File, Delete)
 {
     TempFile file;
 
+    auto directory = Directory::CreateDirectory(Path::GetRandomFileName());
+    EXPECT_FALSE(File::Delete(directory.GetName()));
+    Directory::Delete(directory.GetName());
+
     EXPECT_TRUE(File::Exists(file.GetFilePath()));
     File::Delete(file.GetFilePath());
     EXPECT_FALSE(File::Exists(file.GetFilePath()));
@@ -179,6 +183,10 @@ TEST(File, Exists)
 {
     TempFile file;
 
+    auto directory = Directory::CreateDirectory(Path::GetRandomFileName());
+    EXPECT_FALSE(File::Exists(directory.GetName()));
+    Directory::Delete(directory.GetName());
+
     EXPECT_TRUE(File::Exists(file.GetFilePath()));
     EXPECT_FALSE(File::Exists(file.GetFilePath() + u"tmp"));
 }
@@ -187,6 +195,10 @@ TEST(File, Move)
 {
     TempFile file;
     TempFile file2(file.GetFilePath() + u"tmp");
+
+    auto directory = Directory::CreateDirectory(Path::GetRandomFileName());
+    EXPECT_FALSE(File::Move(directory.GetName(), Path::GetRandomFileName()));
+    Directory::Delete(directory.GetName());
 
     EXPECT_TRUE(File::Exists(file.GetFilePath()));
     EXPECT_TRUE(File::Move(file.GetFilePath(), file2.GetFilePath()));
@@ -338,7 +350,7 @@ TEST(File, WriteAllBytes)
     Random r;
     std::array<std::byte, 32> buffer{};
 
-    for (size_t i = 0 ; i < 1; ++i)
+    for (size_t i = 0; i < 1; ++i)
     {
         std::generate(buffer.begin(), buffer.end(), [&]() { return (std::byte)r.Next(1, 256); });
 
