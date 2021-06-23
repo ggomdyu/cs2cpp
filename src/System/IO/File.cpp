@@ -278,7 +278,7 @@ const Encoding& File::DetectEncoding(gsl::span<const std::byte> bytes) noexcept
     if (bytes.data() == nullptr || bytes.size() < 2)
         return Encoding::UTF8();
 
-    if (bytes[0] == std::byte(0xff) && bytes[1] == std::byte(0xFE))
+    if (bytes[0] == std::byte(0xff) && bytes[1] == std::byte(0xfe))
         return bytes.size() < 4 || bytes[2] != std::byte(0) || bytes[3] != std::byte(0) ?
             Encoding::Unicode() :
             Encoding::UTF32();
