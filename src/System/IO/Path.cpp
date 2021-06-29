@@ -52,18 +52,6 @@ std::u16string Path::ChangeExtension(std::u16string_view path, std::u16string_vi
     return ret;
 }
 
-std::u16string Path::GetFullPath(std::u16string_view path)
-{
-    if (path.length() <= 0)
-        return {};
-
-    auto collapsedString = IsPathRooted(path) ?
-        RemoveRelativeSegments(path) :
-        RemoveRelativeSegments(Combine(Directory::GetCurrentDirectory(), path));
-
-    return collapsedString.length() == 0 ? u"/" : collapsedString;
-}
-
 std::u16string Path::GetFullPath(std::u16string_view path, std::u16string_view basePath)
 {
     return GetFullPath(Combine(basePath, path));

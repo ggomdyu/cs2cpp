@@ -22,7 +22,7 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-thread_local std::vector<wchar_t> GlobalWideCharBuffer(16384);
+thread_local std::array<wchar_t, 16384> GlobalWideCharBuffer;
 
 namespace detail::environment
 {

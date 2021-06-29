@@ -4,7 +4,7 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-extern thread_local std::vector<wchar_t> GlobalWideCharBuffer;
+extern std::array<wchar_t, 16384> GlobalWideCharBuffer;
 
 namespace detail::directory
 {

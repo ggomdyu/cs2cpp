@@ -39,6 +39,18 @@ std::u16string Path::GetDirectoryName(std::u16string_view path)
     return std::u16string(path.substr(0, index));
 }
 
+std::u16string Path::GetFullPath(std::u16string_view path)
+{
+    if (path.length() <= 0)
+        return {};
+
+    auto collapsedString = IsPathRooted(path) ?
+        RemoveRelativeSegments(path) :
+        RemoveRelativeSegments(Combine(Directory::GetCurrentDirectory(), path));
+
+    return collapsedString.length() == 0 ? DirectorySeparatorStr : collapsedString;
+}
+
 std::u16string Path::GetPathRoot(std::u16string_view path)
 {
     return IsDirectorySeparator(path[0]) ? DirectorySeparatorStr : std::u16string();

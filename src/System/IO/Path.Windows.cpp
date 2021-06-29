@@ -5,6 +5,8 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
+extern std::array<wchar_t, 16384> GlobalWideCharBuffer;
+
 std::u16string Path::GetDirectoryName(std::u16string_view path)
 {
     auto rootLen = Path::GetRootLength(path);
@@ -15,6 +17,21 @@ std::u16string Path::GetDirectoryName(std::u16string_view path)
     std::replace(ret.begin(), ret.end(), AltDirectorySeparatorChar, DirectorySeparatorChar);
 
     return ret;
+}
+
+std::u16string Path::GetFullPath(std::u16string_view path)
+{
+    if (path.length() <= 0)
+        return {};
+
+    DWORD fullPathLen = GetFullPathNameW(reinterpret_cast<LPCWSTR>(path.data()), GlobalWideCharBuffer.size(),
+        GlobalWideCharBuffer.data(), nullptr);
+
+    // MSDN says GetFullPathNameW returns the length of the path, not including the terminating null character,
+    // but when I checked it, the terminating null character included in the length. Why?
+    size_t fixedFullPathLen = GlobalWideCharBuffer[fullPathLen - 1] == u'\0' ? fullPathLen - 1 : fullPathLen;
+
+    return std::u16string(reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data()), fixedFullPathLen);
 }
 
 std::u16string Path::GetPathRoot(std::u16string_view path)
@@ -28,9 +45,9 @@ std::u16string Path::GetPathRoot(std::u16string_view path)
 std::u16string Path::GetTempPath()
 {
     auto path = std::array<wchar_t, MAX_PATH + 1>{};
-    auto pathLen = GetTempPathW(MAX_PATH, path.data());
+    auto pathLen = static_cast<size_t>(GetTempPathW(MAX_PATH, path.data()));
 
-    return {reinterpret_cast<const char16_t*>(path.data()), static_cast<size_t>(pathLen)};
+    return std::u16string(reinterpret_cast<const char16_t*>(path.data()), pathLen);
 }
 
 CS2CPP_NAMESPACE_END
