@@ -35,7 +35,7 @@ bool InternalSetEnvironmentVariable(HKEY key, LPCWSTR subKey, std::u16string_vie
 
     SafeRegistryHandle keyHandle(rawKeyHandle);
 
-    auto wideCharName = reinterpret_cast<const wchar_t*>(name.data());
+    auto wideCharName = reinterpret_cast<LPCWSTR>(name.data());
     if (!value.empty())
     {
         if (RegSetValueExW(keyHandle, wideCharName, 0, REG_SZ, reinterpret_cast<const BYTE*>(value.data()),
@@ -63,7 +63,7 @@ std::optional<std::u16string> InternalGetEnvironmentVariable(HKEY predefinedKey,
     DWORD tempCbData = tempData.size();
     DWORD tempType = 0;
 
-    if (RegQueryValueExW(keyHandle, reinterpret_cast<const wchar_t*>(name.data()), nullptr, &tempType,
+    if (RegQueryValueExW(keyHandle, reinterpret_cast<LPCWSTR>(name.data()), nullptr, &tempType,
         reinterpret_cast<LPBYTE>(tempData.data()), &tempCbData) != ERROR_SUCCESS)
         return {};
 
@@ -196,8 +196,8 @@ int32_t InternalGetStackTrace(wchar_t* destStr)
 bool Environment::SetEnvironmentVariable(std::u16string_view name, std::u16string_view value)
 {
     return !!SetEnvironmentVariableW(
-        reinterpret_cast<const wchar_t*>(name.data()),
-        reinterpret_cast<const wchar_t*>(value.data()));
+        reinterpret_cast<LPCWSTR>(name.data()),
+        reinterpret_cast<LPCWSTR>(value.data()));
 }
 
 bool Environment::SetEnvironmentVariable(std::u16string_view name, std::u16string_view value, EnvironmentVariableTarget target)
@@ -225,15 +225,14 @@ bool Environment::SetEnvironmentVariable(std::u16string_view name, std::u16strin
 
 std::optional<std::u16string> Environment::GetEnvironmentVariable(std::u16string_view name)
 {
-    auto length = GetEnvironmentVariableW(reinterpret_cast<const wchar_t*>(name.data()), nullptr, 0);
+    auto length = GetEnvironmentVariableW(reinterpret_cast<LPCWSTR>(name.data()), nullptr, 0);
     if (length == 0)
         return {};
 
     std::u16string ret;
     ret.resize(length);
 
-    if (GetEnvironmentVariableW(reinterpret_cast<const wchar_t*>(name.data()),
-        reinterpret_cast<wchar_t*>(ret.data()), length) == 0)
+    if (GetEnvironmentVariableW(reinterpret_cast<LPCWSTR>(name.data()), reinterpret_cast<LPWSTR>(ret.data()), length) == 0)
         return {};
 
     return std::optional<std::u16string>(std::move(ret));
@@ -294,7 +293,7 @@ bool Environment::Is64BitOperatingSystem()
 void Environment::FailFast(std::u16string_view message)
 {
     OutputDebugStringW(L"FailFast:\n");
-    OutputDebugStringW(reinterpret_cast<const wchar_t*>(message.data()));
+    OutputDebugStringW(reinterpret_cast<LPCWSTR>(message.data()));
 
     std::terminate();
 }

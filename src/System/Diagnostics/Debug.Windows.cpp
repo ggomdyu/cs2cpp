@@ -18,7 +18,7 @@ void Debug::Write(std::u16string_view message)
 
         memcpy(wideCharBuffer.data(), message.data(), bufferCopySize * 2);
         wideCharBuffer[bufferCopySize] = L'\0';
-        OutputDebugStringW(reinterpret_cast<const wchar_t*>(wideCharBuffer.data()));
+        OutputDebugStringW(reinterpret_cast<LPCWSTR>(wideCharBuffer.data()));
 
         message = message.substr(bufferCopySize);
     }

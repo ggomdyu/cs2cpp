@@ -23,7 +23,7 @@ void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_vi
         const auto& currentPath = directories.front();
 
         WIN32_FIND_DATAW findData;
-        auto handle = SafeFindHandle(FindFirstFileW(reinterpret_cast<const wchar_t*>(&currentPath[0]), &findData));
+        auto handle = SafeFindHandle(FindFirstFileW(reinterpret_cast<LPCWSTR>(&currentPath[0]), &findData));
         if (!handle)
             break;
 
@@ -68,7 +68,7 @@ void InternalEnumerateTopDirectoryOnly(std::u16string_view path, std::u16string_
     auto combinedPath = Path::Combine(path, searchPattern);
 
     WIN32_FIND_DATAW findData;
-    auto handle = SafeFindHandle(FindFirstFileW(reinterpret_cast<const wchar_t*>(&combinedPath[0]), &findData));
+    auto handle = SafeFindHandle(FindFirstFileW(reinterpret_cast<LPCWSTR>(&combinedPath[0]), &findData));
     if (!handle)
         return;
 

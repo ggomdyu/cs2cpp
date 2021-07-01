@@ -19,7 +19,7 @@ constexpr bool S_ISDIR(unsigned short m) noexcept
 std::optional<struct _stat> CreateStat(std::u16string_view path)
 {
     struct _stat s {};
-    if (_wstat(reinterpret_cast<const wchar_t*>(path.data()), &s) != 0)
+    if (_wstat(reinterpret_cast<LPCWSTR>(path.data()), &s) != 0)
         return {};
 
     return s;
@@ -62,17 +62,19 @@ bool InternalRecursiveDelete(std::wstring& strBuffer)
 
 bool Directory::Delete(std::u16string_view path, bool recursive)
 {
-    auto s = detail::directory::CreateStat(path);
+    using namespace detail::directory;
+
+    auto s = CreateStat(path);
     if (!s.has_value() || !detail::directory::S_ISDIR(s->st_mode))
         return false;
 
     if (recursive)
     {
-        std::wstring wideCharPath(reinterpret_cast<const wchar_t*>(path.data()), path.length());
-        return detail::directory::InternalRecursiveDelete(wideCharPath);
+        std::wstring wideCharPath(reinterpret_cast<LPCWSTR>(path.data()), path.length());
+        return InternalRecursiveDelete(wideCharPath);
     }
 
-    return RemoveDirectoryW(reinterpret_cast<const wchar_t*>(path.data())) == TRUE;
+    return RemoveDirectoryW(reinterpret_cast<LPCWSTR>(path.data())) == TRUE;
 }
 
 bool Directory::Exists(std::u16string_view path)
@@ -107,23 +109,26 @@ bool Directory::Move(std::u16string_view srcPath, std::u16string_view destPath)
     if (!s.has_value() || !detail::directory::S_ISDIR(s->st_mode))
         return false;
 
-    return _wrename(reinterpret_cast<const wchar_t*>(srcPath.data()), reinterpret_cast<const wchar_t*>(destPath.data())) == 0;
+    return _wrename(reinterpret_cast<LPCWSTR>(srcPath.data()), reinterpret_cast<LPCWSTR>(destPath.data())) == 0;
 }
 
 bool Directory::SetCurrentDirectory(std::u16string_view path)
 {
-    return SetCurrentDirectoryW(reinterpret_cast<const wchar_t*>(path.data())) == TRUE;
+    return SetCurrentDirectoryW(reinterpret_cast<LPCWSTR>(path.data())) == TRUE;
 }
 
 std::u16string Directory::GetCurrentDirectory()
 {
-    auto strLen = GetCurrentDirectoryW(static_cast<DWORD>(GlobalWideCharBuffer.size()), GlobalWideCharBuffer.data());
-    return {reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data()), static_cast<size_t>(strLen)};
+    auto str = reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data());
+    auto strLen = static_cast<size_t>(GetCurrentDirectoryW(static_cast<DWORD>(GlobalWideCharBuffer.size()),
+        GlobalWideCharBuffer.data()));
+
+    return std::u16string(str, strLen);
 }
 
 bool Directory::InternalCreateDirectory(std::u16string_view path)
 {
-    return _wmkdir(reinterpret_cast<const wchar_t*>(path.data())) == 0;
+    return _wmkdir(reinterpret_cast<LPCWSTR>(path.data())) == 0;
 }
 
 CS2CPP_NAMESPACE_END
