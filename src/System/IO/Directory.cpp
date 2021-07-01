@@ -1,25 +1,38 @@
 #include "System/IO/Directory.h"
 #include "System/IO/File.h"
-#include "System/IO/Path.h"
 
 CS2CPP_NAMESPACE_BEGIN
 
 DirectoryInfo Directory::CreateDirectory(std::u16string_view path)
 {
+    if (path.length() == 0)
+        return DirectoryInfo(u"", FullPathTag{});
+
     auto fullPath = Path::GetFullPath(path);
+    if (InternalCreateDirectory(fullPath))
+        return DirectoryInfo(std::move(fullPath), FullPathTag{});
+
+    // Maybe the path is invalid because the path contains directories that don't exist.
     if (fullPath.length() > 0 && !Path::IsDirectorySeparator(fullPath[fullPath.length() - 1]))
         fullPath += Path::DirectorySeparatorChar;
 
-    for (size_t i = Path::IsDirectorySeparator(fullPath[0]) ? 1 : 0; i < fullPath.length(); ++i)
+    auto it = std::next(fullPath.begin(), Path::IsDirectorySeparator(fullPath[0]) ? 1 : 0);
+    while (it != fullPath.end())
     {
-        auto c = fullPath[i];
+        auto c = *it;
         if (Path::IsDirectorySeparator(c))
         {
-            fullPath[i] = 0;
+            *it = 0;
             InternalCreateDirectory(&fullPath[0]);
-            fullPath[i] = c;
+            *it = c;
         }
+
+        ++it;
     }
+
+    // Remove a temporarily added directory separator.
+    if (Path::IsDirectorySeparator(fullPath.back()))
+        fullPath.pop_back();
 
     return DirectoryInfo(std::move(fullPath), FullPathTag{});
 }
@@ -29,13 +42,8 @@ DirectoryInfo Directory::GetParent(std::u16string_view path)
     if (path.length() == 0)
         return DirectoryInfo(u"", FullPathTag{});
 
-    std::u16string parent(path);
-    if (!Path::IsDirectorySeparator(parent[parent.length() - 1]))
-        parent += Path::DirectorySeparatorChar;
-
-    parent += u"../";
-
-    return DirectoryInfo(std::move(parent));
+    auto fullPath = Path::GetFullPath(path);
+    return DirectoryInfo(Path::GetDirectoryName(fullPath));
 }
 
 bool Directory::SetCreationTime(std::u16string_view path, DateTime creationTime)
@@ -106,10 +114,9 @@ std::u16string Directory::GetDirectoryRoot(std::u16string_view path)
 std::vector<std::u16string> Directory::GetDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
 {
     std::vector<std::u16string> ret;
-    EnumerateDirectories(path, searchPattern, searchOption, [&](std::u16string&& str)
-    {
-        ret.push_back(std::move(str));
-    });
+
+    auto callback = [&](std::u16string&& str) { ret.push_back(std::move(str)); };
+    EnumerateDirectories(path, searchPattern, searchOption, callback);
 
     return ret;
 }
@@ -117,10 +124,9 @@ std::vector<std::u16string> Directory::GetDirectories(std::u16string_view path, 
 std::vector<std::u16string> Directory::GetFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
 {
     std::vector<std::u16string> ret;
-    EnumerateFiles(path, searchPattern, searchOption, [&](std::u16string&& str)
-    {
-        ret.push_back(std::move(str));
-    });
+
+    auto callback = [&](std::u16string&& str) { ret.push_back(std::move(str)); };
+    EnumerateFiles(path, searchPattern, searchOption, callback);
 
     return ret;
 }
@@ -128,10 +134,9 @@ std::vector<std::u16string> Directory::GetFiles(std::u16string_view path, std::u
 std::vector<std::u16string> Directory::GetFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
 {
     std::vector<std::u16string> ret;
-    EnumerateFileSystemEntries(path, searchPattern, searchOption, [&](std::u16string&& str)
-    {
-        ret.push_back(std::move(str));
-    });
+
+    auto callback = [&](std::u16string&& str) { ret.push_back(std::move(str)); };
+    EnumerateFileSystemEntries(path, searchPattern, searchOption, callback);
 
     return ret;
 }

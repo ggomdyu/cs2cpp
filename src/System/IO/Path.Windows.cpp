@@ -9,7 +9,7 @@ extern std::array<wchar_t, 16384> GlobalWideCharBuffer;
 
 std::u16string Path::GetDirectoryName(std::u16string_view path)
 {
-    auto rootLen = Path::GetRootLength(path);
+    auto rootLen = static_cast<size_t>(Path::GetRootLength(path));
     auto index = path.length();
     while (rootLen < index && !IsDirectorySeparator(path[--index]));
 
@@ -44,10 +44,10 @@ std::u16string Path::GetPathRoot(std::u16string_view path)
 
 std::u16string Path::GetTempPath()
 {
-    auto path = std::array<wchar_t, MAX_PATH + 1>{};
-    auto pathLen = static_cast<size_t>(GetTempPathW(MAX_PATH, path.data()));
+    auto path = GlobalWideCharBuffer.data();
+    auto pathLen = static_cast<size_t>(GetTempPathW(MAX_PATH, path));
 
-    return std::u16string(reinterpret_cast<const char16_t*>(path.data()), pathLen);
+    return std::u16string(reinterpret_cast<const char16_t*>(path), pathLen);
 }
 
 CS2CPP_NAMESPACE_END

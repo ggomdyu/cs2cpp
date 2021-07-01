@@ -41,8 +41,8 @@ void InternalEnumerateAllDirectories(const char* path, const char* searchPattern
             if (ent->d_type & DT_DIR)
             {
                 // Ignore the . and ..
-                if ((ent->d_namlen == 1 && ent->d_name[0] == '.') ||
-                    (ent->d_namlen == 2 && !strcmp(ent->d_name, "..")))
+                if ((ent->d_namlen == 1 && ent->d_name[0] == '.')
+                    || (ent->d_namlen == 2 && !strcmp(ent->d_name, "..")))
                     continue;
 
                 directories.push_back(PosixPath::Combine(currentPath, {ent->d_name, ent->d_namlen}));
@@ -54,19 +54,19 @@ void InternalEnumerateAllDirectories(const char* path, const char* searchPattern
                 if (fnmatch(searchPattern, ent->d_name, FNM_PATHNAME) != 0)
                     continue;
 
-                auto utf8FullPath = PosixPath::Combine(currentPath, {ent->d_name, ent->d_namlen});
-                auto utf16FullPath = Encoding::UTF8().GetString(reinterpret_cast<const std::byte*>(utf8FullPath.data()),
-                    utf8FullPath.length());
-                if (!utf16FullPath)
+                auto utf8Path = PosixPath::Combine(currentPath, {ent->d_name, ent->d_namlen});
+                auto utf16Path = Encoding::UTF8().GetString(reinterpret_cast<const std::byte*>(utf8Path.data()),
+                    utf8Path.length());
+                if (!utf16Path)
                     continue;
 
                 if constexpr (std::is_same_v<typename FunctionTraits<F>::Return, bool>)
                 {
-                    if (!callback(std::move(utf16FullPath.value())))
+                    if (!callback(std::move(utf16Path.value())))
                         return;
                 }
                 else
-                    callback(std::move(utf16FullPath.value()));
+                    callback(std::move(utf16Path.value()));
             }
         }
     }
@@ -90,27 +90,27 @@ void InternalEnumerateTopDirectoryOnly(const char* path, const char* searchPatte
             continue;
 
         // Ignore the . and ..
-        if ((ent->d_namlen == 1 && ent->d_name[0] == '.') ||
-            (ent->d_namlen == 2 && !strcmp(ent->d_name, "..")))
+        if ((ent->d_namlen == 1 && ent->d_name[0] == '.')
+            || (ent->d_namlen == 2 && !strcmp(ent->d_name, "..")))
             continue;
 
         // Ignore the file that the filename doesn't matched with wildcards.
         if (fnmatch(searchPattern, ent->d_name, FNM_PATHNAME) != 0)
             continue;
 
-        auto utf8FullPath = PosixPath::Combine(path, {ent->d_name, ent->d_namlen});
-        auto utf16FullPath = Encoding::UTF8().GetString(reinterpret_cast<const std::byte*>(utf8FullPath.data()),
-            utf8FullPath.length());
-        if (!utf16FullPath)
+        auto utf8Path = PosixPath::Combine(path, {ent->d_name, ent->d_namlen});
+        auto utf16Path = Encoding::UTF8().GetString(reinterpret_cast<const std::byte*>(utf8Path.data()),
+            utf8Path.length());
+        if (!utf16Path)
             continue;
 
         if constexpr (std::is_same_v<typename FunctionTraits<F>::Return, bool>)
         {
-            if (!callback(std::move(utf16FullPath.value())))
+            if (!callback(std::move(utf16Path.value())))
                 break;
         }
         else
-            callback(std::move(utf16FullPath.value()));
+            callback(std::move(utf16Path.value()));
     }
 }
 

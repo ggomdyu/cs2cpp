@@ -27,9 +27,10 @@ std::optional<struct _stat> CreateStat(std::u16string_view path)
 
 bool InternalRecursiveDelete(std::wstring& strBuffer)
 {
-    if (!Path::IsDirectorySeparator(strBuffer[strBuffer.length() - 1]))
+    if (!Path::IsDirectorySeparator(strBuffer.back()))
         strBuffer.push_back(Path::DirectorySeparatorChar);
 
+    // Add a wildcard
     strBuffer.push_back(u'*');
 
     WIN32_FIND_DATAW findData;
@@ -37,22 +38,26 @@ bool InternalRecursiveDelete(std::wstring& strBuffer)
     if (!handle)
         return false;
 
+    // Remove the wildcard
+    strBuffer.pop_back();
+
     do
     {
         // Ignore the . and ..
-        if (findData.cFileName[0] == L'.' && (findData.cFileName[1] == L'\0' ||
-            (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
+        if (findData.cFileName[0] == L'.' && (findData.cFileName[1] == L'\0'
+            || (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
             continue;
 
-        auto filenameLen = std::char_traits<wchar_t>::length(findData.cFileName);
-        strBuffer += std::wstring_view(findData.cFileName, filenameLen);
+        auto filename = std::wstring_view(findData.cFileName);
+        auto rollbackLength = strBuffer.size();
+        strBuffer += filename;
 
         if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             InternalRecursiveDelete(strBuffer);
         else
             DeleteFileW(strBuffer.data());
 
-        strBuffer.erase(filenameLen);
+        strBuffer.erase(rollbackLength, strBuffer.size() - rollbackLength);
     } while (FindNextFileW(handle, &findData) == TRUE);
 
     return RemoveDirectoryW(strBuffer.data()) == TRUE;

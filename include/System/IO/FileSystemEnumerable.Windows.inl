@@ -1,22 +1,35 @@
 #pragma once
 
 #include <deque>
+#include <shlwapi.h>
 
 #include "System/FunctionTraits.h"
+#include "System/IO/Path.h"
 #include "System/Windows/SafeFindHandle.h"
 #include "System/Windows/Windows.h"
 
-#include "Path.h"
+#pragma comment(lib, "Shlwapi.lib")
 
 CS2CPP_NAMESPACE_BEGIN
 
 namespace detail::filesystem_enumerable
 {
 
+[[nodiscard]] constexpr bool IsMatchWithPattern(std::u16string_view path, std::u16string_view searchPattern)
+{
+    if (searchPattern == u"*")
+        return true;
+
+    if (PathMatchSpecW(reinterpret_cast<LPCWSTR>(path.data()), reinterpret_cast<LPCWSTR>(searchPattern.data())) == TRUE)
+        return true;
+
+    return false;
+}
+
 template <typename F>
 void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_view searchPattern, DWORD filterType, const F& callback)
 {
-    std::deque<std::u16string> directories(1, Path::Combine(path, searchPattern));
+    std::deque<std::u16string> directories(1, Path::Combine(path, u"*"));
 
     while (!directories.empty())
     {
@@ -32,22 +45,25 @@ void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_vi
             if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             {
                 // Ignore the . and ..
-                if (findData.cFileName[0] == L'.' &&
-                    (findData.cFileName[1] == L'\0' || (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
+                if (findData.cFileName[0] == L'.'
+                    && (findData.cFileName[1] == L'\0' || (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
                     continue;
 
-                auto newPath = Path::Combine(currentPath.substr(0, currentPath.length() - searchPattern.size()),
+                auto newPath = Path::Combine(currentPath.substr(0, currentPath.length() - 1),
                     reinterpret_cast<const char16_t*>(findData.cFileName));
                 newPath += Path::DirectorySeparatorChar;
-                newPath += searchPattern;
+                newPath += u"*";
 
                 directories.push_back(std::move(newPath));
             }
 
             if (findData.dwFileAttributes & filterType)
             {
-                auto newPath = Path::Combine(currentPath.substr(0, currentPath.length() - searchPattern.size()),
+                auto newPath = Path::Combine(currentPath.substr(0, currentPath.length() - 1),
                     reinterpret_cast<const char16_t*>(findData.cFileName));
+                if (!IsMatchWithPattern(newPath, searchPattern))
+                    continue;
+
                 if constexpr (std::is_same_v<typename FunctionTraits<F>::Return, bool>)
                 {
                     if (!callback(std::move(newPath)))
@@ -77,8 +93,8 @@ void InternalEnumerateTopDirectoryOnly(std::u16string_view path, std::u16string_
         if (findData.dwFileAttributes & filterType)
         {
             // Ignore the . and ..
-            if (findData.cFileName[0] == L'.' &&
-                (findData.cFileName[1] == L'\0' || (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
+            if (findData.cFileName[0] == L'.'
+                && (findData.cFileName[1] == L'\0' || (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
                 continue;
 
             auto newPath = Path::Combine(path, reinterpret_cast<const char16_t*>(findData.cFileName));
