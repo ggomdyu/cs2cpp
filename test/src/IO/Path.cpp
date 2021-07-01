@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
+#include <System/IO/Directory.h>
 #include <System/IO/Path.h>
+#include <gtest/gtest.h>
 
 using namespace tg;
 
@@ -113,6 +114,7 @@ TEST(Path, HasExtension)
     EXPECT_TRUE(Path::HasExtension(u"1.png"));
     EXPECT_TRUE(Path::HasExtension(u".png"));
     EXPECT_FALSE(Path::HasExtension(u"png"));
+    EXPECT_FALSE(Path::HasExtension(u""));
 }
 
 TEST(Path, ChangeExtension)
@@ -133,12 +135,21 @@ TEST(Path, ChangeExtension)
 
 TEST(Path, GetFullPath)
 {
-#if CS2CPP_PLATFORM_WINDOWS
+    auto cd = Directory::GetCurrentDirectory();
+    auto root = Directory::GetDirectoryRoot(cd);
 
-#else
-    EXPECT_EQ(Path::GetFullPath(u"/"), u"/");
-#endif
+    EXPECT_EQ(Path::GetFullPath(u"\\"), root);
+    EXPECT_EQ(Path::GetFullPath(u"/"), root);
     EXPECT_EQ(Path::GetFullPath(u""), u"");
+    EXPECT_EQ(Path::GetFullPath(u"/Users"), Path::Combine(root, u"Users"));
+    EXPECT_EQ(Path::GetFullPath(u"Users"), Path::Combine(cd, u"Users"));
+#if CS2CPP_PLATFORM_WINDOWS
+    EXPECT_EQ(Path::GetFullPath(u"/Users/Desktop"), Path::Combine(root, u"Users\\Desktop"));
+    EXPECT_EQ(Path::GetFullPath(u"Users/Desktop"), Path::Combine(cd, u"Users\\Desktop"));
+#else
+    EXPECT_EQ(Path::GetFullPath(u"/Users/Desktop"), Path::Combine(root, u"Users/Desktop"));
+    EXPECT_EQ(Path::GetFullPath(u"Users/Desktop"), Path::Combine(cd, u"Users/Desktop"));
+#endif
 }
 
 TEST(Path, GetPathRoot)
@@ -175,6 +186,7 @@ TEST(Path, GetPathRoot)
 #endif
     EXPECT_EQ(Path::GetPathRoot(u"user"), u"");
     EXPECT_EQ(Path::GetPathRoot(u"user/temp"), u"");
+    EXPECT_EQ(Path::GetPathRoot(u""), u"");
 }
 
 TEST(Path, GetRandomFileName)
