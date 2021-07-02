@@ -37,7 +37,7 @@ constexpr int32_t Path::GetRootLength(std::u16string_view path) noexcept
     if (path.length() <= 1)
         return path.length() == 1 && IsDirectorySeparator(path[0]) ? 1 : 0;
 
-    int32_t len = 2;
+    size_t len = 2;
     if (IsDirectorySeparator(path[0]))
     {
         // Check for \\server or \\server\share
@@ -70,7 +70,7 @@ constexpr int32_t Path::GetRootLength(std::u16string_view path) noexcept
     else
         return 0;
 
-    return len;
+    return static_cast<int32_t>(len);
 }
 
 CS2CPP_NAMESPACE_END

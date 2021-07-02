@@ -329,7 +329,7 @@ bool Encoding::operator!=(const Encoding& rhs) const noexcept
 
 std::optional<Encoding> Encoding::Create(int32_t codePage)
 {
-    auto converter = CreateUConverter(codePage);
+    auto converter = CreateInternalConverter(codePage);
     if (!converter)
         return {};
 
@@ -338,7 +338,7 @@ std::optional<Encoding> Encoding::Create(int32_t codePage)
 
 std::optional<Encoding> Encoding::Create(std::u16string_view encodingName)
 {
-    auto converter = CreateUConverter(encodingName);
+    auto converter = CreateInternalConverter(encodingName);
     if (!converter)
         return {};
 
@@ -418,7 +418,8 @@ std::optional<int32_t> Encoding::Convert(const Encoding& srcEncoding, const Enco
 
 std::optional<int32_t> Encoding::Convert(const Encoding& srcEncoding, const Encoding& destEncoding, gsl::span<const std::byte> srcBytes, gsl::span<std::byte> destBytes)
 {
-    return Convert(srcEncoding, destEncoding, &srcBytes[0], srcBytes.size(), &destBytes[0], destBytes.size());
+    return Convert(srcEncoding, destEncoding, &srcBytes[0], static_cast<int32_t>(srcBytes.size()), &destBytes[0],
+        static_cast<int32_t>(destBytes.size()));
 }
 
 void Encoding::SetEncoderFallback(EncoderFallback fallback)
@@ -474,7 +475,7 @@ std::optional<std::u16string> Encoding::GetString(const std::byte* bytes, int32_
 
 std::optional<std::u16string> Encoding::GetString(gsl::span<const std::byte> bytes) const
 {
-    return GetString(bytes.data(), bytes.size());
+    return GetString(bytes.data(), static_cast<int32_t>(bytes.size()));
 }
 
 gsl::span<const std::byte> Encoding::GetPreamble() const noexcept
@@ -581,7 +582,7 @@ bool Encoding::IsSingleByte() const noexcept
     return GetMinCharByte() == 1 && GetMaxCharByte() == 1;
 }
 
-UConverter* Encoding::CreateUConverter(std::u16string_view encodingName)
+UConverter* Encoding::CreateInternalConverter(std::u16string_view encodingName)
 {
     auto status = U_ZERO_ERROR;
     auto converter = ucnv_openU(encodingName.data(), &status);
@@ -591,7 +592,7 @@ UConverter* Encoding::CreateUConverter(std::u16string_view encodingName)
     return converter;
 }
 
-UConverter* Encoding::CreateUConverter(int32_t codePage)
+UConverter* Encoding::CreateInternalConverter(int32_t codePage)
 {
     auto status = U_ZERO_ERROR;
     auto converter = ucnv_openCCSID(codePage, UCNV_IBM, &status);

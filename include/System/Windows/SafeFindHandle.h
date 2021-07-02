@@ -25,6 +25,7 @@ public:
     bool operator==(std::nullptr_t rhs) const noexcept;
     bool operator!=(std::nullptr_t rhs) const noexcept;
     operator HANDLE() const noexcept;
+    operator bool() const noexcept;
 
 private:
     HANDLE _handle = INVALID_HANDLE_VALUE;
@@ -44,9 +45,7 @@ inline SafeFindHandle::SafeFindHandle(SafeFindHandle&& rhs) noexcept :
 inline SafeFindHandle::~SafeFindHandle()
 {
     if (_handle != nullptr)
-    {
         FindClose(_handle);
-    }
 }
 
 inline SafeFindHandle& SafeFindHandle::operator=(SafeFindHandle&& rhs) noexcept
@@ -78,6 +77,11 @@ inline bool SafeFindHandle::operator!=(std::nullptr_t) const noexcept
 inline SafeFindHandle::operator HANDLE() const noexcept
 {
     return _handle;
+}
+
+inline SafeFindHandle::operator bool() const noexcept
+{
+    return _handle != INVALID_HANDLE_VALUE;
 }
 
 CS2CPP_NAMESPACE_END

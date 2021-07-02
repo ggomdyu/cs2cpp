@@ -66,7 +66,7 @@ private:
     static constexpr FileShare DefaultShare = FileShare::Read;
     static constexpr FileOptions DefaultFileOption = FileOptions::None;
     static constexpr int DefaultBufferSize = 4096;
-    static void* NullNativeFileHandle;
+    static void* const NullNativeFileHandle;
 
     void* _nativeFileHandle;
     std::vector<std::byte> _buffer;

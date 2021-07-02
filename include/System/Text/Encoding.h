@@ -69,8 +69,8 @@ public:
     [[nodiscard]] static const Encoding& BigEndianUnicode() noexcept;
 
 private:
-    static UConverter* CreateUConverter(std::u16string_view encodingName);
-    static UConverter* CreateUConverter(int32_t codePage);
+    static UConverter* CreateInternalConverter(std::u16string_view encodingName);
+    static UConverter* CreateInternalConverter(int32_t codePage);
     static std::u16string GetUnicodeEncodingName(UConverter* converter);
     int32_t GetMinCharByte() const noexcept;
     int32_t GetMaxCharByte() const noexcept;

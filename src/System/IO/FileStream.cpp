@@ -221,7 +221,7 @@ int32_t FileStream::Read(std::byte* bytes, int32_t count)
     }
 
     auto copiedBytes = std::min(leftReadBufferSpace, count);
-    std::memcpy(bytes, &_buffer[0] + _readPos, copiedBytes);
+    memcpy(bytes, &_buffer[0] + _readPos, copiedBytes);
 
     _readPos += copiedBytes;
 
@@ -264,12 +264,12 @@ bool FileStream::Write(const std::byte* bytes, int32_t count)
             // If the specified buffer can be stored into the m_buffer directly
             if (count <= numBytes)
             {
-                std::memcpy(&GetBuffer()[_writePos], bytes, count);
+                memcpy(&GetBuffer()[_writePos], bytes, count);
                 _writePos += count;
                 return true;
             }
 
-            std::memcpy(&GetBuffer()[_writePos], bytes, static_cast<size_t>(numBytes));
+            memcpy(&GetBuffer()[_writePos], bytes, static_cast<size_t>(numBytes));
             _writePos += numBytes;
             bytes += numBytes;
             count -= numBytes;
@@ -284,7 +284,7 @@ bool FileStream::Write(const std::byte* bytes, int32_t count)
         return true;
     }
 
-    std::memcpy(&GetBuffer()[_writePos], bytes, count);
+    memcpy(&GetBuffer()[_writePos], bytes, count);
     _writePos += count;
 
     return true;

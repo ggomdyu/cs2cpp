@@ -39,7 +39,7 @@ bool InternalSetEnvironmentVariable(HKEY key, LPCWSTR subKey, std::u16string_vie
     if (!value.empty())
     {
         if (RegSetValueExW(keyHandle, wideCharName, 0, REG_SZ, reinterpret_cast<const BYTE*>(value.data()),
-            value.length() + 1) != ERROR_SUCCESS)
+            static_cast<DWORD>(value.length()) + 1) != ERROR_SUCCESS)
             return false;
     }
     else
@@ -59,15 +59,15 @@ std::optional<std::u16string> InternalGetEnvironmentVariable(HKEY predefinedKey,
 
     SafeRegistryHandle keyHandle(nativeKeyHandle);
 
-    std::array<char16_t, 2048> tempData{};
-    DWORD tempCbData = tempData.size();
-    DWORD tempType = 0;
+    DWORD type = 0;
+    std::array<char16_t, 2048> buffer{};
+    auto bufferSize = static_cast<DWORD>(buffer.size());
 
-    if (RegQueryValueExW(keyHandle, reinterpret_cast<LPCWSTR>(name.data()), nullptr, &tempType,
-        reinterpret_cast<LPBYTE>(tempData.data()), &tempCbData) != ERROR_SUCCESS)
+    if (RegQueryValueExW(keyHandle, reinterpret_cast<LPCWSTR>(name.data()), nullptr, &type,
+        reinterpret_cast<LPBYTE>(buffer.data()), &bufferSize) != ERROR_SUCCESS)
         return {};
 
-    return tempData.data();
+    return buffer.data();
 }
 
 std::vector<HMODULE> GetAllProcessModule(HANDLE processHandle)
@@ -77,23 +77,21 @@ std::vector<HMODULE> GetAllProcessModule(HANDLE processHandle)
         return {};
 
     std::vector<HMODULE> moduleHandles(tempModuleByteCount / sizeof(HMODULE));
-    if (EnumProcessModules(processHandle, &moduleHandles[0], moduleHandles.size() * sizeof(HMODULE),
+    if (EnumProcessModules(processHandle, &moduleHandles[0], static_cast<DWORD>(moduleHandles.size()) * sizeof(HMODULE),
         &tempModuleByteCount) == 0)
         return {};
 
     return moduleHandles;
 }
 
-DWORD InternalGetStackTrace(EXCEPTION_POINTERS* ep, wchar_t* destStr, int32_t* destStrLen)
+DWORD InternalGetStackTrace(EXCEPTION_POINTERS* ep, wchar_t* destStr, size_t* destStrLen)
 {
+    using namespace detail::environment;
+
     HANDLE threadHandle = GetCurrentThread();
     HANDLE processHandle = GetCurrentProcess();
-
     if (SymInitialize(processHandle, nullptr, false) == FALSE)
-    {
-        *destStrLen = 0;
         return EXCEPTION_EXECUTE_HANDLER;
-    }
 
     SymSetOptions(SymGetOptions() | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
 
@@ -116,9 +114,10 @@ DWORD InternalGetStackTrace(EXCEPTION_POINTERS* ep, wchar_t* destStr, int32_t* d
     frame.AddrFrame.Mode = AddrModeFlat;
 #endif
 
-    auto moduleHandles = detail::environment::GetAllProcessModule(processHandle);
-
+    std::vector<HMODULE> moduleHandles = GetAllProcessModule(processHandle);
     void* baseModuleAddress = nullptr;
+
+    // Load all symbol data from the pdb file.
     for (auto it = moduleHandles.rbegin(); it != moduleHandles.rend(); ++it)
     {
         auto moduleHandle = *it;
@@ -138,35 +137,38 @@ DWORD InternalGetStackTrace(EXCEPTION_POINTERS* ep, wchar_t* destStr, int32_t* d
     std::array<wchar_t, 2048> undecoratedName{};
     DWORD64 displacement = 0;
     DWORD offsetFromSymbol = 0;
-    const auto* image = ImageNtHeader(baseModuleAddress);
+    PIMAGE_NT_HEADERS image = ImageNtHeader(baseModuleAddress);
 
-    *destStrLen = 0;
-
+    // Some stack trace lines are unnecessary, so we will discard them.
     int32_t stackIgnoreCount = 3;
+
     do
     {
-        if (frame.AddrPC.Offset != 0)
+        std::array<std::byte, sizeof(SYMBOL_INFOW) + 1024> symbolBytes{};
+
+        auto* si = reinterpret_cast<SYMBOL_INFOW*>(symbolBytes.data());
+        si->SizeOfStruct = sizeof(SYMBOL_INFOW);
+        si->MaxNameLen = static_cast<DWORD>(undecoratedName.size());
+        SymFromAddrW(processHandle, frame.AddrPC.Offset, &displacement, si);
+
+        // Get the file name and line
+        IMAGEHLP_LINEW64 line{};
+        line.SizeOfStruct = sizeof(line);
+        SymGetLineFromAddrW64(processHandle, frame.AddrPC.Offset, &offsetFromSymbol, &line);
+
+        // Write the current stack metadata into the buffer
+        if (stackIgnoreCount == 0)
         {
-            std::array<std::byte, sizeof(SYMBOL_INFOW) + 1024> symbolBytes{};
+            auto format = L"   at %s in %s:line %d\n";
+            auto formattedStrLen = wsprintfW(reinterpret_cast<wchar_t*>(destStr) + *destStrLen, format, si->Name,
+                line.FileName, line.LineNumber);
 
-            auto* si = reinterpret_cast<SYMBOL_INFOW*>(symbolBytes.data());
-            si->SizeOfStruct = sizeof(SYMBOL_INFOW);
-            si->MaxNameLen = static_cast<DWORD>(undecoratedName.size());
-            SymFromAddrW(processHandle, frame.AddrPC.Offset, &displacement, si);
-
-            // Get the file name and line.
-            IMAGEHLP_LINEW64 line{};
-            line.SizeOfStruct = sizeof(line);
-            SymGetLineFromAddrW64(processHandle, frame.AddrPC.Offset, &offsetFromSymbol, &line);
-
-            // Write the current stack metadata into the buffer.
-            if (stackIgnoreCount == 0)
-                *destStrLen += wsprintf(reinterpret_cast<wchar_t*>(destStr) + *destStrLen,
-                    L"   at %s in %s:line %d\n", si->Name, line.FileName, line.LineNumber);
-            else
-                --stackIgnoreCount;
+            *destStrLen += static_cast<size_t>(formattedStrLen);
         }
+        else
+            --stackIgnoreCount;
 
+        // Move to the next stack frame
         if (StackWalk64(image->FileHeader.Machine, processHandle, threadHandle, &frame, context, nullptr,
             SymFunctionTableAccess64, SymGetModuleBase64, nullptr) == FALSE)
             break;
@@ -177,18 +179,18 @@ DWORD InternalGetStackTrace(EXCEPTION_POINTERS* ep, wchar_t* destStr, int32_t* d
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
-int32_t InternalGetStackTrace(wchar_t* destStr)
+size_t InternalGetStackTrace(wchar_t* destStr)
 {
-    int32_t destStrLen = 0;
+    size_t stackTraceLen = 0;
     __try
     {
         CS2CPP_THROW_SEH_EXCEPTION();
     }
-    __except (InternalGetStackTrace(GetExceptionInformation(), destStr, &destStrLen))
+    __except (InternalGetStackTrace(GetExceptionInformation(), destStr, &stackTraceLen))
     {
     }
 
-    return destStrLen;
+    return stackTraceLen;
 }
 
 }
@@ -303,19 +305,18 @@ int32_t Environment::GetSystemPageSize()
     SYSTEM_INFO si;
     GetSystemInfo(&si);
 
-    return si.dwPageSize;
+    return static_cast<int32_t>(si.dwPageSize);
 }
 
 int32_t Environment::GetCurrentManagedThreadId()
 {
-    return GetCurrentThreadId();
+    return static_cast<int32_t>(GetCurrentThreadId());
 }
 
 std::u16string Environment::GetUserName()
 {
     std::array<wchar_t, 2048> name{};
-    DWORD nameLen = name.size();
-
+    auto nameLen = static_cast<DWORD>(name.size());
     if (GetUserNameW(name.data(), &nameLen) == FALSE)
         return {};
 
@@ -325,8 +326,7 @@ std::u16string Environment::GetUserName()
 std::u16string Environment::GetMachineName()
 {
     std::array<wchar_t, 2048> name{};
-    DWORD nameLen = name.size();
-
+    auto nameLen = static_cast<DWORD>(name.size());
     if (GetComputerNameW(name.data(), &nameLen) == FALSE)
         return {};
 
@@ -336,8 +336,7 @@ std::u16string Environment::GetMachineName()
 std::u16string Environment::GetUserDomainName()
 {
     std::array<wchar_t, 2048> name{};
-    DWORD nameLen = name.size();
-
+    auto nameLen = static_cast<DWORD>(name.size());
     if (GetUserNameExW(NameSamCompatible, name.data(), &nameLen) == 0)
         return {};
 
@@ -345,15 +344,17 @@ std::u16string Environment::GetUserDomainName()
     if (!str)
         return {};
 
-    return {reinterpret_cast<const char16_t*>(name.data()), static_cast<size_t>(str - name.data())};
+    return std::u16string(reinterpret_cast<const char16_t*>(name.data()), str - name.data());
 }
 
 std::u16string Environment::GetStackTrace()
 {
-    auto str = reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data());
-    auto strLen = detail::environment::InternalGetStackTrace(GlobalWideCharBuffer.data());
+    using namespace detail::environment;
 
-    return {str, static_cast<size_t>(strLen)};
+    auto str = reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data());
+    auto strLen = InternalGetStackTrace(GlobalWideCharBuffer.data());
+
+    return std::u16string(str, strLen);
 }
 
 std::map<std::u16string, std::u16string> Environment::GetEnvironmentVariables()

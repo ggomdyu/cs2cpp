@@ -6,7 +6,7 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-void* FileStream::NullNativeFileHandle = nullptr;
+void* const FileStream::NullNativeFileHandle = nullptr;
 
 namespace detail::filestream
 {
@@ -31,7 +31,7 @@ int64_t FileStream::Length() const
 {
     FILE* nativeFileHandle = reinterpret_cast<FILE*>(_nativeFileHandle);
 
-    const auto prevSeekOffset = ftell(nativeFileHandle);
+    auto prevSeekOffset = ftell(nativeFileHandle);
     fseek(nativeFileHandle, 0, SEEK_END);
 
     auto length = ftell(nativeFileHandle);
@@ -103,11 +103,11 @@ int64_t FileStream::InternalSeek(int64_t offset, SeekOrigin origin)
 
 void FileStream::InternalClose()
 {
-    if (_nativeFileHandle != NullNativeFileHandle)
-    {
-        fclose(reinterpret_cast<FILE*>(_nativeFileHandle));
-        _nativeFileHandle = NullNativeFileHandle;
-    }
+    if (_nativeFileHandle == NullNativeFileHandle)
+        return;
+
+    fclose(reinterpret_cast<FILE*>(_nativeFileHandle));
+    _nativeFileHandle = NullNativeFileHandle;
 }
 
 void FileStream::InternalFlush() const

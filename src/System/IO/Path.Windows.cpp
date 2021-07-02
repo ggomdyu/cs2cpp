@@ -24,8 +24,8 @@ std::u16string Path::GetFullPath(std::u16string_view path)
     if (path.length() <= 0)
         return {};
 
-    DWORD fullPathLen = GetFullPathNameW(reinterpret_cast<LPCWSTR>(path.data()), GlobalWideCharBuffer.size(),
-        GlobalWideCharBuffer.data(), nullptr);
+    DWORD fullPathLen = GetFullPathNameW(reinterpret_cast<LPCWSTR>(path.data()),
+        static_cast<DWORD>(GlobalWideCharBuffer.size()), GlobalWideCharBuffer.data(), nullptr);
 
     // MSDN says GetFullPathNameW returns the length of the path, not including the terminating null character,
     // but when I checked it, the terminating null character included in the length. Why?

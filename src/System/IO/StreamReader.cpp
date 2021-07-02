@@ -150,7 +150,7 @@ int32_t StreamReader::ReadBuffer()
 
     // If character bytes are overlapped at the boundary of byteBuffer, it will occur fallback while decoding.
     // Therefore, when the stream is read again, we need to fill byteBuffer with _fallbackBuffer.
-    auto fallbackBufferSize = _fallbackBuffer->size();
+    auto fallbackBufferSize = static_cast<int32_t>(_fallbackBuffer->size());
     if (!_fallbackBuffer->empty())
     {
         assert(byteBuffer.size() > _fallbackBuffer->size());
@@ -163,7 +163,7 @@ int32_t StreamReader::ReadBuffer()
     // If the stream indicates EOF, then escape the function.
     int32_t readByteCount;
     if ((readByteCount = _stream->Read(&byteBuffer[fallbackBufferSize],
-        byteBuffer.size() - fallbackBufferSize)) == 0)
+        static_cast<int32_t>(byteBuffer.size()) - fallbackBufferSize)) == 0)
         return 0;
 
     readByteCount += fallbackBufferSize;
@@ -177,8 +177,8 @@ int32_t StreamReader::ReadBuffer()
     decltype(auto) charBuffer = GetCharBuffer();
 
     auto convertedBytes = Encoding::Convert(_encoding, Encoding::Unicode(),
-        &byteBuffer[_bytePos], static_cast<size_t>(readByteCount) - _bytePos,
-        reinterpret_cast<std::byte*>(charBuffer.data()), charBuffer.size() * sizeof(charBuffer[0]));
+        &byteBuffer[_bytePos], readByteCount - _bytePos, reinterpret_cast<std::byte*>(charBuffer.data()),
+        static_cast<int32_t>(charBuffer.size() * sizeof(charBuffer[0])));
     if (!convertedBytes && !_fallbackBuffer->empty())
     {
         // The stream read too short data, which causes fallback.
