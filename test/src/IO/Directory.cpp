@@ -4,77 +4,9 @@
 #include <System/Random.h>
 #include <gtest/gtest.h>
 
+#include "TempDirectory.h"
+
 using namespace tg;
-
-namespace
-{
-
-class TempDirectory
-{
-public:
-    explicit TempDirectory(std::u16string path);
-    TempDirectory();
-    ~TempDirectory();
-
-public:
-    std::u16string AddTempFile();
-    std::u16string AddTempFile(std::u16string_view extension);
-    [[nodiscard]] const std::u16string& GetPath() const;
-
-private:
-    std::u16string _path;
-};
-
-TempDirectory::TempDirectory(std::u16string path) :
-    _path(std::move(path))
-{
-}
-
-TempDirectory::TempDirectory() :
-    TempDirectory([&]()
-    {
-        return Directory::CreateDirectory(Path::GetRandomFileName()).ToString();
-    } ())
-{
-}
-
-TempDirectory::~TempDirectory()
-{
-    Directory::Delete(_path);
-}
-
-std::u16string TempDirectory::AddTempFile()
-{
-    auto path = Path::Combine(_path, Path::GetRandomFileName());
-
-    auto fs = FileStream::Create(path, FileMode::OpenOrCreate);
-    for (int i = 0; i < 1024; ++i)
-        fs->WriteByte(std::byte(i % 256));
-
-    fs->Close();
-
-    return path;
-}
-
-std::u16string TempDirectory::AddTempFile(std::u16string_view extension)
-{
-    auto path = Path::Combine(_path, Path::GetRandomFileName() + u"." + extension.data());
-
-    auto fs = FileStream::Create(path, FileMode::OpenOrCreate);
-    for (int i = 0; i < 1024; ++i)
-        fs->WriteByte(std::byte(i % 256));
-
-    fs->Close();
-
-    return path;
-}
-
-const std::u16string& TempDirectory::GetPath() const
-{
-    return _path;
-}
-
-}
 
 TEST(Directory, CreateDirectory)
 {
@@ -91,12 +23,18 @@ TEST(Directory, Delete)
     // Delete a empty directory
     TempDirectory directory;
     EXPECT_TRUE(Directory::Exists(directory.GetPath()));
-    Directory::Delete(directory.GetPath());
+    EXPECT_TRUE(Directory::Delete(directory.GetPath()));
     EXPECT_FALSE(Directory::Exists(directory.GetPath()));
-    auto directory2 = Directory::CreateDirectory(Path::Combine(Path::GetRandomFileName(), Path::GetRandomFileName()));
-    EXPECT_TRUE(Directory::Exists(directory2.ToString()));
-    EXPECT_TRUE(Directory::Delete(directory2.ToString(), true));
-    EXPECT_FALSE(Directory::Exists(directory2.ToString()));
+    auto filename1 = Path::GetRandomFileName();
+    auto filename2 = Path::GetRandomFileName();
+    TempDirectory directory2(Directory::CreateDirectory(Path::Combine(filename1, filename2)).ToString());
+    EXPECT_TRUE(Directory::Exists(directory2.GetPath()));
+    EXPECT_TRUE(Directory::Delete(directory2.GetPath(), true));
+    EXPECT_FALSE(Directory::Exists(directory2.GetPath()));
+    EXPECT_FALSE(Directory::Exists(directory2.GetPath()));
+    EXPECT_TRUE(Directory::Exists(filename1));
+    EXPECT_TRUE(Directory::Delete(filename1));
+    EXPECT_FALSE(Directory::Exists(filename1));
 
     // 1 depth directory remove
     TempDirectory directory3;

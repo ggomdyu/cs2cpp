@@ -22,4 +22,5 @@ set_target_properties(test PROPERTIES
 
 target_include_directories(test PRIVATE
     ${PROJECT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )

@@ -4,58 +4,9 @@
 #include <System/Random.h>
 #include <gtest/gtest.h>
 
+#include "TempFile.h"
+
 using namespace tg;
-
-namespace
-{
-
-class TempFile
-{
-public:
-    explicit TempFile(std::u16string path);
-    TempFile();
-    ~TempFile();
-
-public:
-    [[nodiscard]] const std::u16string& GetPath() const;
-
-private:
-    std::u16string _path;
-};
-
-TempFile::TempFile(std::u16string path) :
-    _path(std::move(path))
-{
-}
-
-TempFile::TempFile() :
-    TempFile([&]()
-    {
-        auto cd = Environment::GetCurrentDirectory();
-        auto path = Path::Combine(cd, Path::GetRandomFileName());
-
-        auto fs = FileStream::Create(path, FileMode::OpenOrCreate);
-        for (int i = 0; i < 1024; ++i)
-            fs->WriteByte(std::byte(i % 256));
-
-        fs->Close();
-
-        return path;
-    } ())
-{
-}
-
-TempFile::~TempFile()
-{
-    File::Delete(_path);
-}
-
-const std::u16string& TempFile::GetPath() const
-{
-    return _path;
-}
-
-}
 
 TEST(File, AppendAllLines)
 {
@@ -159,10 +110,10 @@ TEST(File, Delete)
 
     auto directory = Directory::CreateDirectory(Path::GetRandomFileName());
     EXPECT_FALSE(File::Delete(directory.GetName()));
-    Directory::Delete(directory.GetName());
+    EXPECT_TRUE(Directory::Delete(directory.ToString()));
 
     EXPECT_TRUE(File::Exists(file.GetPath()));
-    File::Delete(file.GetPath());
+    EXPECT_TRUE(File::Delete(file.GetPath()));
     EXPECT_FALSE(File::Exists(file.GetPath()));
 }
 
@@ -185,7 +136,7 @@ TEST(File, Exists)
 
     auto directory = Directory::CreateDirectory(Path::GetRandomFileName());
     EXPECT_FALSE(File::Exists(directory.GetName()));
-    Directory::Delete(directory.GetName());
+    EXPECT_TRUE(Directory::Delete(directory.ToString()));
 
     EXPECT_TRUE(File::Exists(file.GetPath()));
     EXPECT_FALSE(File::Exists(file.GetPath() + u"tmp"));
@@ -198,7 +149,7 @@ TEST(File, Move)
 
     auto directory = Directory::CreateDirectory(Path::GetRandomFileName());
     EXPECT_FALSE(File::Move(directory.GetName(), Path::GetRandomFileName()));
-    Directory::Delete(directory.GetName());
+    EXPECT_TRUE(Directory::Delete(directory.ToString()));
 
     EXPECT_TRUE(File::Exists(file.GetPath()));
     EXPECT_TRUE(File::Move(file.GetPath(), file2.GetPath()));
@@ -288,7 +239,7 @@ TEST(File, SetAttributes)
 TEST(File, SetCreationTime)
 {
     TempFile file;
-    
+
     auto dtl = DateTime(2001, 10, 12, 4, 2, 10, DateTimeKind::Local);
     auto dtu = DateTime(2001, 10, 12, 4, 2, 10, DateTimeKind::Utc);
     File::SetCreationTime(file.GetPath(), dtl);
@@ -300,7 +251,7 @@ TEST(File, SetCreationTime)
 TEST(File, SetCreationTimeUtc)
 {
     TempFile file;
-    
+
     auto dtl = DateTime(2001, 10, 12, 4, 2, 10, DateTimeKind::Local);
     auto dtu = DateTime(2001, 10, 12, 4, 2, 10, DateTimeKind::Utc);
     File::SetCreationTimeUtc(file.GetPath(), dtu);
