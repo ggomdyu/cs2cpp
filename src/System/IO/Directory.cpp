@@ -16,18 +16,15 @@ DirectoryInfo Directory::CreateDirectory(std::u16string_view path)
     if (fullPath.length() > 0 && !Path::IsDirectorySeparator(fullPath[fullPath.length() - 1]))
         fullPath += Path::DirectorySeparatorChar;
 
-    auto it = std::next(fullPath.begin(), Path::IsDirectorySeparator(fullPath[0]) ? 1 : 0);
-    while (it != fullPath.end())
+    for (size_t i = Path::IsDirectorySeparator(fullPath[0]) ? 1 : 0; i < fullPath.size(); ++i)
     {
-        auto c = *it;
+        auto c = fullPath[i];
         if (Path::IsDirectorySeparator(c))
         {
-            *it = 0;
-            InternalCreateDirectory(&fullPath[0]);
-            *it = c;
+            fullPath[i] = 0;
+            InternalCreateDirectory({&fullPath[0], i + 1});
+            fullPath[i] = c;
         }
-
-        ++it;
     }
 
     // Remove a temporarily added directory separator.

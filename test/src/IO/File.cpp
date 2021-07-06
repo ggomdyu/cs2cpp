@@ -232,8 +232,12 @@ TEST(File, SetAttributes)
     TempFile file;
 
     EXPECT_FALSE((size_t)*File::GetAttributes(file.GetPath()) & (size_t)FileAttributes::Hidden);
-    File::SetAttributes(file.GetPath(), FileAttributes::Hidden);
+    EXPECT_TRUE(File::SetAttributes(file.GetPath(), FileAttributes::Hidden));
     EXPECT_TRUE((size_t)*File::GetAttributes(file.GetPath()) & (size_t)FileAttributes::Hidden);
+    EXPECT_FALSE((size_t)*File::GetAttributes(file.GetPath()) & (size_t)FileAttributes::ReadOnly);
+    EXPECT_TRUE(File::SetAttributes(file.GetPath(), FileAttributes::ReadOnly));
+    EXPECT_FALSE((size_t)*File::GetAttributes(file.GetPath()) & (size_t)FileAttributes::Hidden);
+    EXPECT_TRUE((size_t)*File::GetAttributes(file.GetPath()) & (size_t)FileAttributes::ReadOnly);
 }
 
 TEST(File, SetCreationTime)
@@ -242,22 +246,13 @@ TEST(File, SetCreationTime)
 
     auto dtl = DateTime(2001, 10, 12, 4, 2, 10, DateTimeKind::Local);
     auto dtu = DateTime(2001, 10, 12, 4, 2, 10, DateTimeKind::Utc);
+    auto dtu2 = DateTime(2001, 10, 12, 4, 2, 10, DateTimeKind::Unspecified);
     File::SetCreationTime(file.GetPath(), dtl);
     EXPECT_EQ(File::GetCreationTime(file.GetPath()).value(), dtu);
     File::SetCreationTime(file.GetPath(), dtu);
     EXPECT_EQ(File::GetCreationTime(file.GetPath()).value(), dtu.AddHours(9.0));
-}
-
-TEST(File, SetCreationTimeUtc)
-{
-    TempFile file;
-
-    auto dtl = DateTime(2001, 10, 12, 4, 2, 10, DateTimeKind::Local);
-    auto dtu = DateTime(2001, 10, 12, 4, 2, 10, DateTimeKind::Utc);
-    File::SetCreationTimeUtc(file.GetPath(), dtu);
-    EXPECT_EQ(File::GetCreationTimeUtc(file.GetPath()).value(), dtu);
-    File::SetCreationTimeUtc(file.GetPath(), dtl);
-    EXPECT_EQ(File::GetCreationTimeUtc(file.GetPath()).value(), dtu.AddHours(-9.0));
+    File::SetCreationTime(file.GetPath(), dtu2);
+    EXPECT_EQ(File::GetCreationTime(file.GetPath()).value(), dtu);
 }
 
 TEST(File, SetLastAccessTimeUtc)

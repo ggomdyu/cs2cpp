@@ -1,4 +1,5 @@
 #include "System/Environment.h"
+#include "System/IO/Directory.h"
 #include "System/IO/Path.h"
 
 CS2CPP_NAMESPACE_BEGIN

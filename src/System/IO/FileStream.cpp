@@ -1,4 +1,5 @@
 #include "System/IO/FileStream.h"
+#include "System/IO/Path.h"
 
 CS2CPP_NAMESPACE_BEGIN
 
@@ -9,17 +10,17 @@ class FileStream final :
     public CS2CPP_NAMESPACE::FileStream
 {
 public:
-    FileStream(void* nativeFileHandle, std::u16string_view path, FileAccess access, int32_t bufferSize);
+    FileStream(void* nativeFileHandle, std::u16string path, FileAccess access, int32_t bufferSize);
 };
 
-FileStream::FileStream(void* nativeFileHandle, std::u16string_view path, FileAccess access, int32_t bufferSize) :
-    CS2CPP_NAMESPACE::FileStream(nativeFileHandle, path, access, bufferSize)
+FileStream::FileStream(void* nativeFileHandle, std::u16string path, FileAccess access, int32_t bufferSize) :
+    CS2CPP_NAMESPACE::FileStream(nativeFileHandle, std::move(path), access, bufferSize)
 {
 }
 
 }
 
-FileStream::FileStream(void* nativeFileHandle, std::u16string_view path, FileAccess access, int32_t bufferSize) :
+FileStream::FileStream(void* nativeFileHandle, std::u16string path, FileAccess access, int32_t bufferSize) :
     _nativeFileHandle(nativeFileHandle),
     _bufferSize(bufferSize),
     _readPos(0),
@@ -27,7 +28,7 @@ FileStream::FileStream(void* nativeFileHandle, std::u16string_view path, FileAcc
     _writePos(0),
     _filePos(0),
     _access(access),
-    _path(path)
+    _path(std::move(path))
 {
 }
 
@@ -107,11 +108,13 @@ std::shared_ptr<FileStream> FileStream::Create(std::u16string_view path, FileMod
     if (bufferSize <= 0)
         return {};
 
-    auto nativeFileHandle = InternalOpenHandle(path, mode, access, share, options);
+    auto fullPath = Path::GetFullPath(path);
+    auto nativeFileHandle = InternalOpenHandle(fullPath, mode, access, share, options);
     if (nativeFileHandle == NullNativeFileHandle)
         return {};
 
-    auto fileStream = std::make_shared<detail::filestream::FileStream>(nativeFileHandle, path, access, bufferSize);
+    auto fileStream = std::make_shared<detail::filestream::FileStream>(nativeFileHandle, std::move(fullPath),
+        access, bufferSize);
     if (mode == FileMode::Append)
         fileStream->Seek(0, SeekOrigin::End);
 

@@ -379,7 +379,7 @@ std::optional<std::vector<std::byte>> Encoding::Convert(const Encoding& srcEncod
 
     std::vector<std::byte> ret(encodedStrByteCount);
     status = U_ZERO_ERROR;
-    str.extract(reinterpret_cast<char*>(&ret[0]), int32_t(ret.size()), destEncoding._converter.get(), status);
+    str.extract(reinterpret_cast<char*>(&ret[0]), static_cast<int32_t>(ret.size()), destEncoding._converter.get(), status);
 
     return ret;
 }

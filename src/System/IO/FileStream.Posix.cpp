@@ -60,9 +60,10 @@ void* FileStream::InternalOpenHandle(std::u16string_view path, FileMode mode, Fi
         mode = FileMode::Create;
 
     auto utf8Path = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
-        {reinterpret_cast<const std::byte*>(path.data()), sizeof(path[0]) * path.length()});
+        {reinterpret_cast<const std::byte*>(path.data()), sizeof(path[0]) * (path.length() + 1)});
 
-    return fopen(reinterpret_cast<const char*>(utf8Path->data()), detail::filestream::ConvertFileModeAccessToNative(mode, access));
+    return fopen(reinterpret_cast<const char*>(utf8Path->data()),
+        detail::filestream::ConvertFileModeAccessToNative(mode, access));
 }
 
 int32_t FileStream::InternalRead(std::byte* bytes, int32_t count)

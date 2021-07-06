@@ -15,7 +15,7 @@ namespace detail::directory
 std::optional<struct stat> CreateStat(std::u16string_view path)
 {
     auto utf8Path = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
-        reinterpret_cast<const std::byte*>(path.data()), sizeof(path[0]) * path.length());
+        reinterpret_cast<const std::byte*>(path.data()), static_cast<int32_t>(sizeof(path[0]) * (path.length() + 1)));
     if (!utf8Path)
         return {};
 
@@ -55,54 +55,63 @@ bool InternalRecursiveDelete(std::string_view path)
 
 bool Directory::Exists(std::u16string_view path)
 {
-    auto s = detail::directory::CreateStat(path);
-    if (!s || !S_ISDIR(s->st_mode))
-        return false;
+    auto fullPath = Path::GetFullPath(path);
 
-    return true;
+    auto s = detail::directory::CreateStat(fullPath);
+    return s && S_ISDIR(s->st_mode);
 }
 
 bool Directory::Delete(std::u16string_view path, bool recursive)
 {
-    auto utf8Path = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
-        reinterpret_cast<const std::byte*>(path.data()), sizeof(path[0]) * path.length());
-    if (!utf8Path)
+    auto fullPath = Path::GetFullPath(path);
+
+    auto utf8FullPath = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
+        reinterpret_cast<const std::byte*>(fullPath.data()),
+        static_cast<int32_t>(sizeof(fullPath[0]) * (fullPath.length() + 1)));
+    if (!utf8FullPath)
         return false;
 
     if (!recursive)
-        return rmdir(reinterpret_cast<const char*>(utf8Path->data())) == 0;
+        return rmdir(reinterpret_cast<const char*>(utf8FullPath->data())) == 0;
 
-    return detail::directory::InternalRecursiveDelete({reinterpret_cast<const char*>(utf8Path->data()), utf8Path->size()});
+    return detail::directory::InternalRecursiveDelete(
+        {reinterpret_cast<const char*>(utf8FullPath->data()), utf8FullPath->size() - 1});
 }
 
 bool Directory::Move(std::u16string_view srcPath, std::u16string_view destPath)
 {
     auto utf8SrcPath = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
-        reinterpret_cast<const std::byte*>(srcPath.data()), static_cast<int32_t>(sizeof(srcPath[0]) * srcPath.length()));
+        reinterpret_cast<const std::byte*>(srcPath.data()),
+        static_cast<int32_t>(sizeof(srcPath[0]) * (srcPath.length() + 1)));
     if (!utf8SrcPath)
         return false;
 
-    // Check whether the specified file exists.
+    // Check whether the specified file exists
     struct stat s{};
     if (stat(reinterpret_cast<const char*>(utf8SrcPath->data()), &s) != 0 || !S_ISDIR(s.st_mode))
         return false;
 
     auto utf8DestPath = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
-        reinterpret_cast<const std::byte*>(destPath.data()), static_cast<int32_t>(sizeof(destPath[0]) * destPath.length()));
+        reinterpret_cast<const std::byte*>(destPath.data()),
+        static_cast<int32_t>(sizeof(destPath[0]) * (destPath.length() + 1)));
     if (!utf8DestPath)
         return false;
 
-    return rename(reinterpret_cast<const char*>(utf8SrcPath->data()), reinterpret_cast<const char*>(utf8DestPath->data())) == 0;
+    return rename(reinterpret_cast<const char*>(utf8SrcPath->data()),
+        reinterpret_cast<const char*>(utf8DestPath->data())) == 0;
 }
 
 bool Directory::SetCurrentDirectory(std::u16string_view path)
 {
-    auto utf8Path = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
-        reinterpret_cast<const std::byte*>(path.data()), static_cast<int32_t>(sizeof(path[0]) * path.length()));
-    if (!utf8Path)
+    auto fullPath = Path::GetFullPath(path);
+
+    auto utf8FullPath = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
+        reinterpret_cast<const std::byte*>(fullPath.data()),
+        static_cast<int32_t>(sizeof(fullPath[0]) * (fullPath.length() + 1)));
+    if (!utf8FullPath)
         return false;
 
-    return chdir(reinterpret_cast<const char*>(utf8Path->data())) == 0;
+    return chdir(reinterpret_cast<const char*>(utf8FullPath->data())) == 0;
 }
 
 std::u16string Directory::GetCurrentDirectory()
@@ -140,7 +149,7 @@ std::vector<std::u16string> Directory::GetLogicalDrives()
 bool Directory::InternalCreateDirectory(std::u16string_view path)
 {
     auto utf8Path = Encoding::Convert(Encoding::Unicode(), Encoding::UTF8(),
-        reinterpret_cast<const std::byte*>(path.data()), static_cast<int32_t>(sizeof(path[0]) * path.length()));
+        reinterpret_cast<const std::byte*>(path.data()), static_cast<int32_t>(sizeof(path[0]) * (path.length() + 1)));
     if (!utf8Path)
         return false;
 

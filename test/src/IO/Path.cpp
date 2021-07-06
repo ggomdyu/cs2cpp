@@ -137,12 +137,12 @@ TEST(Path, GetFullPath)
     auto cd = Directory::GetCurrentDirectory();
     auto root = Directory::GetDirectoryRoot(cd);
 
-    EXPECT_EQ(Path::GetFullPath(u"\\"), root);
     EXPECT_EQ(Path::GetFullPath(u"/"), root);
     EXPECT_EQ(Path::GetFullPath(u""), u"");
     EXPECT_EQ(Path::GetFullPath(u"/Users"), Path::Combine(root, u"Users"));
     EXPECT_EQ(Path::GetFullPath(u"Users"), Path::Combine(cd, u"Users"));
 #if CS2CPP_PLATFORM_WINDOWS
+    EXPECT_EQ(Path::GetFullPath(u"\\"), root);
     EXPECT_EQ(Path::GetFullPath(u"/Users/Desktop"), Path::Combine(root, u"Users\\Desktop"));
     EXPECT_EQ(Path::GetFullPath(u"Users/Desktop"), Path::Combine(cd, u"Users\\Desktop"));
 #else

@@ -17,7 +17,7 @@ public:
     ~FileStream() override;
     
 protected:
-    FileStream(void* nativeFileHandle, std::u16string_view path, FileAccess access, int32_t bufferSize);
+    FileStream(void* nativeFileHandle, std::u16string path, FileAccess access, int32_t bufferSize);
 
 public:
     FileStream& operator=(const FileStream& rhs) = delete;

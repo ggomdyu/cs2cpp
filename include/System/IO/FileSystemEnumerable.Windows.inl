@@ -15,7 +15,7 @@ CS2CPP_NAMESPACE_BEGIN
 namespace detail::filesystem_enumerable
 {
 
-[[nodiscard]] constexpr bool IsMatchWithPattern(std::u16string_view path, std::u16string_view searchPattern)
+[[nodiscard]] inline bool IsMatchWithPattern(std::u16string_view path, std::u16string_view searchPattern)
 {
     if (searchPattern == u"*")
         return true;
@@ -27,7 +27,7 @@ namespace detail::filesystem_enumerable
 }
 
 template <typename F>
-void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_view searchPattern, DWORD filterType, const F& callback)
+void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_view searchPattern, DWORD filter, const F& callback)
 {
     std::deque<std::u16string> directories(1, Path::Combine(path, u"*"));
 
@@ -57,7 +57,7 @@ void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_vi
                 directories.push_back(std::move(newPath));
             }
 
-            if (findData.dwFileAttributes & filterType)
+            if (findData.dwFileAttributes & filter)
             {
                 auto newPath = Path::Combine(currentPath.substr(0, currentPath.length() - 1),
                     reinterpret_cast<const char16_t*>(findData.cFileName));
@@ -79,7 +79,7 @@ void InternalEnumerateAllDirectories(std::u16string_view path, std::u16string_vi
 }
 
 template <typename F>
-void InternalEnumerateTopDirectoryOnly(std::u16string_view path, std::u16string_view searchPattern, DWORD filterType, const F& callback)
+void InternalEnumerateTopDirectoryOnly(std::u16string_view path, std::u16string_view searchPattern, DWORD filter, const F& callback)
 {
     auto combinedPath = Path::Combine(path, searchPattern);
 
@@ -90,7 +90,7 @@ void InternalEnumerateTopDirectoryOnly(std::u16string_view path, std::u16string_
 
     do
     {
-        if (findData.dwFileAttributes & filterType)
+        if (findData.dwFileAttributes & filter)
         {
             // Ignore the . and ..
             if (findData.cFileName[0] == L'.'
@@ -109,39 +109,36 @@ void InternalEnumerateTopDirectoryOnly(std::u16string_view path, std::u16string_
     } while (FindNextFileW(handle, &findData) == TRUE);
 }
 
+template <typename F>
+void InternalEnumerate(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, DWORD filter, const F& callback)
+{
+    if (searchOption == SearchOption::AllDirectories)
+        InternalEnumerateAllDirectories(path, searchPattern, filter, callback);
+    else
+        InternalEnumerateTopDirectoryOnly(path, searchPattern, filter, callback);
+}
+
 }
 
 template <typename F>
 void FileSystemEnumerable::EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback)
 {
     using namespace detail::filesystem_enumerable;
-
-    if (searchOption == SearchOption::AllDirectories)
-        InternalEnumerateAllDirectories(path, searchPattern, FILE_ATTRIBUTE_DIRECTORY, callback);
-    else
-        InternalEnumerateTopDirectoryOnly(path, searchPattern, FILE_ATTRIBUTE_DIRECTORY, callback);
+    InternalEnumerate(path, searchPattern, searchOption, FILE_ATTRIBUTE_DIRECTORY, callback);
 }
 
 template <typename F>
 void FileSystemEnumerable::EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback)
 {
     using namespace detail::filesystem_enumerable;
-
-    if (searchOption == SearchOption::AllDirectories)
-        InternalEnumerateAllDirectories(path, searchPattern, FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_NORMAL, callback);
-    else
-        InternalEnumerateTopDirectoryOnly(path, searchPattern, FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_NORMAL, callback);
+    InternalEnumerate(path, searchPattern, searchOption, FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_NORMAL, callback);
 }
 
 template <typename F>
 void FileSystemEnumerable::EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback)
 {
     using namespace detail::filesystem_enumerable;
-
-    if (searchOption == SearchOption::AllDirectories)
-        InternalEnumerateAllDirectories(path, searchPattern, std::numeric_limits<DWORD>::max(), callback);
-    else
-        InternalEnumerateTopDirectoryOnly(path, searchPattern, std::numeric_limits<DWORD>::max(), callback);
+    InternalEnumerate(path, searchPattern, searchOption, std::numeric_limits<DWORD>::max(), callback);
 }
 
 CS2CPP_NAMESPACE_END

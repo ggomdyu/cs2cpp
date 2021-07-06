@@ -10,7 +10,7 @@ CS2CPP_NAMESPACE_BEGIN
 namespace detail::file
 {
 
-NSDate* ConvertDateTimeToNative(DateTime dateTime)
+[[nodiscard]] NSDate* ConvertDateTimeToNative(DateTime dateTime)
 {
     auto dateComponents = [[NSDateComponents alloc] init];
     [dateComponents setYear:dateTime.GetYear()];
@@ -22,9 +22,9 @@ NSDate* ConvertDateTimeToNative(DateTime dateTime)
 
     auto calendar = [NSCalendar currentCalendar];
     auto date = [calendar dateFromComponents:dateComponents];
-    auto modificationDate = [date dateByAddingTimeInterval:[[NSTimeZone systemTimeZone] secondsFromGMT]];
 
-    return modificationDate;
+    return dateTime.GetKind() == DateTimeKind::Utc ?
+        [date dateByAddingTimeInterval:[[NSTimeZone systemTimeZone] secondsFromGMT]] : date;
 }
 
 }
@@ -32,12 +32,10 @@ NSDate* ConvertDateTimeToNative(DateTime dateTime)
 bool File::SetCreationTimeUtc(std::u16string_view path, DateTime creationTimeUtc)
 {
     auto date = detail::file::ConvertDateTimeToNative(creationTimeUtc);
-    auto attributes = [NSDictionary dictionaryWithObjectsAndKeys:date, NSFileCreationDate, nullptr];
-    
-    auto fileManager = [NSFileManager defaultManager];
-    auto nsPath = [NSString stringWithCharacters:reinterpret_cast<const unichar*>(path.data()) length:path.length()];
 
-    return !![fileManager setAttributes: attributes ofItemAtPath:nsPath error: nullptr];
+    auto attributes = @{NSFileCreationDate : date};
+    auto nsPath = [NSString stringWithCharacters:reinterpret_cast<const unichar*>(path.data()) length:path.length()];
+    return !![[NSFileManager defaultManager] setAttributes: attributes ofItemAtPath:nsPath error: nil];
 }
     
 bool File::SetLastAccessTimeUtc(std::u16string_view path, DateTime lastAccessTimeUtc)
@@ -56,7 +54,7 @@ bool File::SetLastWriteTimeUtc(std::u16string_view path, DateTime lastWriteTimeU
 {
     auto date = detail::file::ConvertDateTimeToNative(lastWriteTimeUtc);
     
-    auto attributes = [NSDictionary dictionaryWithObjectsAndKeys:date, NSFileModificationDate, nullptr];
+    auto attributes = @{NSFileModificationDate : date};
     auto characters = reinterpret_cast<const unichar*>(path.data());
     auto nsPath = [NSString stringWithCharacters:characters length:path.length()];
 
@@ -68,23 +66,19 @@ bool File::Copy(std::u16string_view srcPath, std::u16string_view destPath, bool 
     if (overwrite)
         Delete(destPath);
 
-    auto srcPathChars = reinterpret_cast<const unichar*>(srcPath.data());
-    auto destPathChars = reinterpret_cast<const unichar*>(destPath.data());
-
-    auto nsSrcPath = [NSString stringWithCharacters:srcPathChars length:srcPath.length()];
-    auto nsDestPath = [NSString stringWithCharacters:destPathChars length:destPath.length()];
+    auto nsSrcPath = [NSString stringWithCharacters:reinterpret_cast<const unichar*>(srcPath.data())
+        length:srcPath.length()];
+    auto nsDestPath = [NSString stringWithCharacters:reinterpret_cast<const unichar*>(destPath.data())
+        length:destPath.length()];
 
     return [[NSFileManager defaultManager] copyItemAtPath:nsSrcPath toPath:nsDestPath error:nil];
 }
 
 SafeFilePointer File::InternalFileOpen(std::u16string_view path, std::u16string_view mode)
 {
-    auto pathChars = reinterpret_cast<const unichar*>(path.data());
-    auto modeChars = reinterpret_cast<const unichar*>(mode.data());
-
     return SafeFilePointer(fopen(
-        [NSString stringWithCharacters:pathChars length:path.length()].UTF8String,
-        [NSString stringWithCharacters:modeChars length:mode.length()].UTF8String
+        [NSString stringWithCharacters:reinterpret_cast<const unichar*>(path.data()) length:path.length()].UTF8String,
+        [NSString stringWithCharacters:reinterpret_cast<const unichar*>(mode.data()) length:mode.length()].UTF8String
     ));
 }
 

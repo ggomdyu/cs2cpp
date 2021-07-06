@@ -88,14 +88,14 @@ const std::u16string& Environment::GetCommandLine()
         auto arguments = [[NSProcessInfo processInfo] arguments];
         for (NSUInteger i = 0; i < [arguments count] - 1; ++i)
         {
-            auto argument = std::u16string_view(reinterpret_cast<const char16_t*>([arguments[i]
+            std::u16string_view argument(reinterpret_cast<const char16_t*>([arguments[i]
                 cStringUsingEncoding:NSUTF16LittleEndianStringEncoding]));
             
             ret += argument;
             ret += u' ';
         }
-        
-        auto argument = std::u16string_view(reinterpret_cast<const char16_t*>([arguments[arguments.count - 1]
+
+        std::u16string_view argument(reinterpret_cast<const char16_t*>([arguments[arguments.count - 1]
             cStringUsingEncoding:NSUTF16LittleEndianStringEncoding]));
         ret += argument;
     
