@@ -17,37 +17,55 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 
 if(WIN32)
     set(CS2CPP_PLATFORM "Windows" CACHE STRING "")
+    set(CS2CPP_SUPPORT_POSIX FALSE)
 elseif(APPLE)
     set(CS2CPP_PLATFORM "MacOS" CACHE STRING "")
     set(CMAKE_CXX_FLAGS "-fobjc-abi-version=2 -fobjc-arc")
+    set(CS2CPP_SUPPORT_POSIX TRUE)
 else()
     message(FATAL_ERROR "Your platform is not supported.")
 endif()
 
-if(NOT CS2CPP_PLATFORM STREQUAL "Windows")
-    set(CS2CPP_SUPPORT_POSIX TRUE)
-else()
-    set(CS2CPP_SUPPORT_POSIX FALSE)
-endif()
 set(CS2CPP_NAMESPACE_NAME "tg" CACHE STRING "")
 
 check_include_file(emmintrin.h CS2CPP_SUPPORT_SSE2)
 check_include_file(arm_neon.h CS2CPP_SUPPORT_NEON)
-if(CS2CPP_SUPPORT_SSE2 OR CS2CPP_SUPPORT_NEON)
-    set(CS2CPP_SUPPORT_SIMD TRUE)
-else()
-    set(CS2CPP_SUPPORT_SIMD FALSE)
-endif()
-option(CS2CPP_ENABLE_SIMD "" ${CS2CPP_SUPPORT_SIMD})
 option(CS2CPP_ENABLE_NAMESPACE "" TRUE)
 option(CS2CPP_ENABLE_TEST "" TRUE)
 option(CS2CPP_ENABLE_INSTALL "" TRUE)
 
-function(init_find_package)
+function(find_packages)
     find_package(Microsoft.GSL CONFIG REQUIRED)
     find_package(FMT REQUIRED)
     find_package(ICU 67.1 COMPONENTS uc io i18n data REQUIRED)
     find_path(STB_INCLUDE_DIRS "stb.h")
+endfunction()
+
+function(export_package)
+    set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/)
+    set(LIBRARIES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+    configure_package_config_file(
+        cmake/${PROJECT_NAME}-config.cmake.in
+        ${PROJECT_NAME}-config.cmake
+        INSTALL_DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+        PATH_VARS INCLUDE_DIR LIBRARIES
+    )
+
+    write_basic_package_version_file(
+        ${PROJECT_NAME}-config-version.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
+
+    install(
+        FILES ${PROJECT_NAME}-config.cmake ${PROJECT_NAME}-config-version.cmake
+        DESTINATION lib/${PROJECT_NAME}/cmake
+    )
+
+    export(
+        TARGETS cs2cpp ${ICU_LIBRARIES}
+        FILE ${PROJECT_NAME}-targets.cmake
+    )
 endfunction()
 
 function(init_subdirectories)
@@ -80,33 +98,27 @@ endfunction()
 
 function(init_compile_definitions)
     target_compile_definitions(cs2cpp PUBLIC
-        # Disable exception on fmt
-        FMT_EXCEPTIONS=0
+        # Namespaces
+        "CS2CPP_NAMESPACE_NAME=${CS2CPP_NAMESPACE_NAME}"
+        "CS2CPP_NAMESPACE_BEGIN=$<$<BOOL:${CS2CPP_ENABLE_NAMESPACE}>:namespace\t${CS2CPP_NAMESPACE_NAME}{>"
+        "CS2CPP_NAMESPACE_END=$<$<BOOL:${CS2CPP_ENABLE_NAMESPACE}>:}>"
 
-        # Add UNICODE, _UNICODE if the target platform is Windows
-        $<$<STREQUAL:$<UPPER_CASE:"${CS2CPP_PLATFORM}">,"WINDOWS">:
-            -DUNICODE
-            -D_UNICODE
-            -DWIN32_LEAN_AND_MEAN
-            -DNOMINMAX
-        >
+        # SIMD settings
+        "CS2CPP_SUPPORT_SIMD=$<OR:$<BOOL:${CS2CPP_SUPPORT_SSE2}>,$<BOOL:${CS2CPP_SUPPORT_NEON}>>"
+        "CS2CPP_SUPPORT_SSE2=$<BOOL:${CS2CPP_SUPPORT_SSE2}>"
+        "CS2CPP_SUPPORT_NEON=$<BOOL:${CS2CPP_SUPPORT_NEON}>"
 
-        # Add namespace support macro
-        $<IF:$<BOOL:${CS2CPP_ENABLE_NAMESPACE}>, CS2CPP_NAMESPACE=${CS2CPP_NAMESPACE_NAME},>
-        $<IF:$<BOOL:${CS2CPP_ENABLE_NAMESPACE}>, CS2CPP_NAMESPACE_BEGIN=namespace\t${CS2CPP_NAMESPACE_NAME}{,>
-        $<IF:$<BOOL:${CS2CPP_ENABLE_NAMESPACE}>, CS2CPP_NAMESPACE_END=},>
+        # Platform settings
+        "CS2CPP_PLATFORM_$<UPPER_CASE:${CS2CPP_PLATFORM}>=1"
+        "CS2CPP_SUPPORT_POSIX=$<NOT:$<PLATFORM_ID:Windows>>"
 
-        # Add platform identifier macro
-        $<UPPER_CASE:CS2CPP_PLATFORM_${CS2CPP_PLATFORM}>=1
+        # Compiler attributes
+        "CS2CPP_NOINLINE=$<IF:$<CXX_COMPILER_ID:MSVC>,__declspec(noinline),__attribute__((noinline))>"
+        "CS2CPP_NOVTABLE=$<$<CXX_COMPILER_ID:MSVC>:__declspec(novtable)>"
 
-        # Add SIMD support macro
-        CS2CPP_ENABLE_SIMD=$<BOOL:${CS2CPP_ENABLE_SIMD}>
-        CS2CPP_SUPPORT_SIMD=$<BOOL:${CS2CPP_SUPPORT_SIMD}>
-        $<IF:$<BOOL:${CS2CPP_SUPPORT_SSE2}>, CS2CPP_SIMD_SSE2=1,
-        $<IF:$<BOOL:${CS2CPP_SUPPORT_NEON}>, CS2CPP_SIMD_NEON=1,>>
-
-        # Add POSIX support macro
-        CS2CPP_SUPPORT_POSIX=$<BOOL:${CS2CPP_SUPPORT_POSIX}>
+        # Etc
+        $<$<PLATFORM_ID:Windows>:UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX>
+        "FMT_EXCEPTIONS=0"
     )
 endfunction()
 
@@ -121,35 +133,9 @@ function(init_link_libraries)
     )
 endfunction()
 
-function(init_install_package)
-    set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/)
-    set(LIBRARIES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    configure_package_config_file(
-        cmake/${PROJECT_NAME}-config.cmake.in
-        ${PROJECT_NAME}-config.cmake
-        INSTALL_DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
-        PATH_VARS INCLUDE_DIR LIBRARIES
-    )
-
-    write_basic_package_version_file(
-        ${PROJECT_NAME}-config-version.cmake
-        VERSION ${PROJECT_VERSION}
-        COMPATIBILITY SameMajorVersion
-    )
-
-    install(
-        FILES ${PROJECT_NAME}-config.cmake ${PROJECT_NAME}-config-version.cmake
-        DESTINATION lib/${PROJECT_NAME}/cmake
-    )
-
-    export(
-        TARGETS cs2cpp ${ICU_LIBRARIES}
-        FILE ${PROJECT_NAME}-targets.cmake
-    )
-endfunction()
-
 function(init_cs2cpp)
-    init_find_package()
+    find_packages()
+
     init_subdirectories()
     init_properties()
     init_include_directories()
@@ -157,7 +143,7 @@ function(init_cs2cpp)
     init_link_libraries()
 
     if (CS2CPP_ENABLE_INSTALL)
-        init_install_package()
+        export_package()
     endif()
 endfunction()
 

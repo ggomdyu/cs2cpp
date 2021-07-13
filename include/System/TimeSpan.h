@@ -207,12 +207,12 @@ constexpr int32_t TimeSpan::Days() const noexcept
 
 constexpr int32_t TimeSpan::Hours() const noexcept
 {
-    return (_ticks / TicksPerHour) % 24;
+    return static_cast<int32_t>((_ticks / TicksPerHour) % 24);
 }
 
 constexpr int32_t TimeSpan::Minutes() const noexcept
 {
-    return (_ticks / TicksPerMinute) % 60;
+    return static_cast<int32_t>((_ticks / TicksPerMinute) % 60);
 }
 
 constexpr int32_t TimeSpan::Seconds() const noexcept
@@ -267,7 +267,7 @@ constexpr TimeSpan TimeSpan::Divide(double divisor) const noexcept
 
 constexpr double TimeSpan::Divide(TimeSpan timeSpan) const noexcept
 {
-    return static_cast<double>(_ticks) / timeSpan._ticks;
+    return static_cast<double>(_ticks) / static_cast<double>(timeSpan._ticks);
 }
 
 constexpr TimeSpan TimeSpan::Multiply(double factor) const noexcept

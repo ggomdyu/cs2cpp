@@ -22,8 +22,6 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-thread_local std::array<wchar_t, 16384> GlobalWideCharBuffer;
-
 namespace detail::environment
 {
 
@@ -60,7 +58,7 @@ std::optional<std::u16string> InternalGetEnvironmentVariable(HKEY predefinedKey,
     SafeRegistryHandle keyHandle(nativeKeyHandle);
 
     DWORD type = 0;
-    std::array<char16_t, 2048> buffer{};
+    auto buffer = std::array<char16_t, 8192>{};
     auto bufferSize = static_cast<DWORD>(buffer.size());
 
     if (RegQueryValueExW(keyHandle, reinterpret_cast<LPCWSTR>(name.data()), nullptr, &type,
@@ -84,9 +82,13 @@ std::vector<HMODULE> GetAllProcessModule(HANDLE processHandle)
     return moduleHandles;
 }
 
-DWORD InternalGetStackTrace(EXCEPTION_POINTERS* ep, wchar_t* destStr, size_t* destStrLen)
+CS2CPP_NOINLINE DWORD InternalGetStackTrace(EXCEPTION_POINTERS* ep, std::u16string& destStr)
 {
     using namespace detail::environment;
+
+    // The stack backtrace requires many buffer spaces most of the time,
+    // so we will reserve the size of the buffer as many as possible.
+    destStr.reserve(1024);
 
     HANDLE threadHandle = GetCurrentThread();
     HANDLE processHandle = GetCurrentProcess();
@@ -139,58 +141,57 @@ DWORD InternalGetStackTrace(EXCEPTION_POINTERS* ep, wchar_t* destStr, size_t* de
     DWORD offsetFromSymbol = 0;
     PIMAGE_NT_HEADERS image = ImageNtHeader(baseModuleAddress);
 
+    auto walkStack = [&]()
+    {
+        return StackWalk64(image->FileHeader.Machine, processHandle, threadHandle, &frame, context, nullptr,
+            SymFunctionTableAccess64, SymGetModuleBase64, nullptr);
+    };
+
     // Some stack trace lines are unnecessary, so we will discard them.
     int32_t stackIgnoreCount = 3;
+    while (stackIgnoreCount--)
+        walkStack();
 
     do
     {
-        std::array<std::byte, sizeof(SYMBOL_INFOW) + 1024> symbolBytes{};
-
+        // Write the current stack metadata into the buffer.
+        auto symbolBytes = std::array<std::byte, sizeof(SYMBOL_INFOW) + 1024>{};
         auto* si = reinterpret_cast<SYMBOL_INFOW*>(symbolBytes.data());
         si->SizeOfStruct = sizeof(SYMBOL_INFOW);
         si->MaxNameLen = static_cast<DWORD>(undecoratedName.size());
         SymFromAddrW(processHandle, frame.AddrPC.Offset, &displacement, si);
 
-        // Get the file name and line
-        IMAGEHLP_LINEW64 line{};
+        // Get the file name and the line.
+        auto line = IMAGEHLP_LINEW64{};
         line.SizeOfStruct = sizeof(line);
-        SymGetLineFromAddrW64(processHandle, frame.AddrPC.Offset, &offsetFromSymbol, &line);
 
-        // Write the current stack metadata into the buffer
-        if (stackIgnoreCount == 0)
-        {
-            auto format = L"   at %s in %s:line %d\n";
-            auto formattedStrLen = wsprintfW(reinterpret_cast<wchar_t*>(destStr) + *destStrLen, format, si->Name,
-                line.FileName, line.LineNumber);
-
-            *destStrLen += static_cast<size_t>(formattedStrLen);
-        }
+        auto isLineParsed = !!SymGetLineFromAddrW64(processHandle, frame.AddrPC.Offset, &offsetFromSymbol, &line);
+        if (isLineParsed)
+            fmt::format_to(std::back_inserter(destStr), L"   at {} in {}:line {}\n", si->Name, line.FileName, line.LineNumber);
         else
-            --stackIgnoreCount;
+            fmt::format_to(std::back_inserter(destStr), L"   at {}\n", si->Name);
 
-        // Move to the next stack frame
-        if (StackWalk64(image->FileHeader.Machine, processHandle, threadHandle, &frame, context, nullptr,
-            SymFunctionTableAccess64, SymGetModuleBase64, nullptr) == FALSE)
-            break;
+        walkStack();
+
     } while (frame.AddrReturn.Offset != 0);
+
+    if (!destStr.empty() && destStr.back() == u'\n')
+        destStr.pop_back();
 
     SymCleanup(processHandle);
 
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
-size_t InternalGetStackTrace(wchar_t* destStr)
+CS2CPP_NOINLINE void InternalGetStackTrace(std::u16string& destStr)
 {
-    size_t stackTraceLen = 0;
     __try
     {
         CS2CPP_THROW_SEH_EXCEPTION();
     }
-    __except (InternalGetStackTrace(GetExceptionInformation(), destStr, &stackTraceLen))
+    __except (InternalGetStackTrace(GetExceptionInformation(), destStr))
     {
     }
-
-    return stackTraceLen;
 }
 
 }
@@ -254,11 +255,11 @@ std::optional<std::u16string> Environment::GetEnvironmentVariable(std::u16string
 
 std::u16string Environment::GetFolderPath(SpecialFolder folder)
 {
-    std::array<wchar_t, 2048> wideCharPath{};
-    if (SHGetFolderPathW(nullptr, static_cast<int>(folder), nullptr, 0, wideCharPath.data()) != S_OK)
+    std::array<wchar_t, 8192> path{};
+    if (SHGetFolderPathW(nullptr, static_cast<int>(folder), nullptr, 0, path.data()) != S_OK)
         return {};
 
-    return reinterpret_cast<const char16_t*>(wideCharPath.data());
+    return reinterpret_cast<const char16_t*>(path.data());
 }
 
 const std::u16string& Environment::GetCommandLine()
@@ -315,7 +316,7 @@ int32_t Environment::GetCurrentManagedThreadId()
 
 std::u16string Environment::GetUserName()
 {
-    std::array<wchar_t, 2048> name{};
+    std::array<wchar_t, 4096> name{};
     auto nameLen = static_cast<DWORD>(name.size());
     if (GetUserNameW(name.data(), &nameLen) == FALSE)
         return {};
@@ -325,7 +326,7 @@ std::u16string Environment::GetUserName()
 
 std::u16string Environment::GetMachineName()
 {
-    std::array<wchar_t, 2048> name{};
+    std::array<wchar_t, 4096> name{};
     auto nameLen = static_cast<DWORD>(name.size());
     if (GetComputerNameW(name.data(), &nameLen) == FALSE)
         return {};
@@ -335,7 +336,7 @@ std::u16string Environment::GetMachineName()
 
 std::u16string Environment::GetUserDomainName()
 {
-    std::array<wchar_t, 2048> name{};
+    std::array<wchar_t, 4096> name{};
     auto nameLen = static_cast<DWORD>(name.size());
     if (GetUserNameExW(NameSamCompatible, name.data(), &nameLen) == 0)
         return {};
@@ -347,14 +348,14 @@ std::u16string Environment::GetUserDomainName()
     return std::u16string(reinterpret_cast<const char16_t*>(name.data()), str - name.data());
 }
 
-std::u16string Environment::GetStackTrace()
+CS2CPP_NOINLINE std::u16string Environment::GetStackTrace()
 {
     using namespace detail::environment;
 
-    auto str = reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data());
-    auto strLen = InternalGetStackTrace(GlobalWideCharBuffer.data());
+    std::u16string str;
+    InternalGetStackTrace(str);
 
-    return std::u16string(str, strLen);
+    return str;
 }
 
 std::map<std::u16string, std::u16string> Environment::GetEnvironmentVariables()
@@ -393,20 +394,6 @@ std::map<std::u16string, std::u16string> Environment::GetEnvironmentVariables()
     return ret;
 }
 
-OperatingSystem Environment::GetOSVersion()
-{
-    OSVERSIONINFOEX vi
-    {
-        vi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX)
-    };
-    GetVersionExW(reinterpret_cast<OSVERSIONINFO*>(&vi));
-
-    Version version(vi.dwMajorVersion, vi.dwMinorVersion, vi.dwBuildNumber,
-        (vi.wServicePackMajor << 16) | vi.wServicePackMinor);
-
-    return OperatingSystem(PlatformID::Win32NT, version, reinterpret_cast<const char16_t*>(&vi.szCSDVersion[0]));
-}
-
 bool Environment::GetUserInteractive()
 {
     static auto cachedWindowStationHandle = HWINSTA(nullptr);
@@ -439,6 +426,19 @@ int64_t Environment::GetWorkingSet()
         return pmc.WorkingSetSize;
 
     return 0;
+}
+
+std::optional<OperatingSystem> Environment::GetOSVersion()
+{
+    auto vi = OSVERSIONINFOEX{};
+    vi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+    if (GetVersionExW(reinterpret_cast<OSVERSIONINFO*>(&vi)) == FALSE)
+        return {};
+
+    Version version(static_cast<int32_t>(vi.dwMajorVersion), static_cast<int32_t>(vi.dwMinorVersion),
+        static_cast<int32_t>(vi.dwBuildNumber), (vi.wServicePackMajor << 16) | vi.wServicePackMinor);
+
+    return OperatingSystem(PlatformID::Win32NT, version, reinterpret_cast<const char16_t*>(&vi.szCSDVersion[0]));
 }
 
 CS2CPP_NAMESPACE_END

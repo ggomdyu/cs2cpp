@@ -93,10 +93,10 @@ public:
     [[nodiscard]] static bool Is64BitProcess();
     [[nodiscard]] static bool Is64BitOperatingSystem();
     [[noreturn]] static void FailFast(std::u16string_view message);
-    [[nodiscard]] static std::u16string GetStackTrace();
+    [[nodiscard]] CS2CPP_NOINLINE static std::u16string GetStackTrace();
     [[nodiscard]] static std::u16string GetSystemDirectory();
     [[nodiscard]] static std::map<std::u16string, std::u16string> GetEnvironmentVariables();
-    [[nodiscard]] static OperatingSystem GetOSVersion();
+    [[nodiscard]] static std::optional<OperatingSystem> GetOSVersion();
     [[nodiscard]] static bool GetUserInteractive();
     [[nodiscard]] static int64_t GetWorkingSet();
     [[nodiscard]] static std::vector<std::u16string> GetLogicalDrives();

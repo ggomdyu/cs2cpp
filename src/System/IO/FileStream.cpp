@@ -7,14 +7,14 @@ namespace detail::filestream
 {
 
 class FileStream final :
-    public CS2CPP_NAMESPACE::FileStream
+    public CS2CPP_NAMESPACE_NAME::FileStream
 {
 public:
     FileStream(void* nativeFileHandle, std::u16string path, FileAccess access, int32_t bufferSize);
 };
 
 FileStream::FileStream(void* nativeFileHandle, std::u16string path, FileAccess access, int32_t bufferSize) :
-    CS2CPP_NAMESPACE::FileStream(nativeFileHandle, std::move(path), access, bufferSize)
+    CS2CPP_NAMESPACE_NAME::FileStream(nativeFileHandle, std::move(path), access, bufferSize)
 {
 }
 

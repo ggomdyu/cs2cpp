@@ -5,12 +5,6 @@
 
 #include "FunctionTraits.h"
 
-#if _MSC_VER
-#    define CS2CPP_NOVTABLE __declspec(novtable)
-#else
-#    define CS2CPP_NOVTABLE
-#endif
-
 CS2CPP_NAMESPACE_BEGIN
 
 namespace detail::delegate
@@ -142,7 +136,7 @@ public:
 private:
     template <typename F>
     static constexpr bool IsLargeFunction() noexcept;
-    bool IsDynamicAllocated() const noexcept;
+    [[nodiscard]] bool IsDynamicAllocated() const noexcept;
     void Copy(const Delegate& rhs);
     void Move(Delegate&& rhs) noexcept;
     void Destroy();
