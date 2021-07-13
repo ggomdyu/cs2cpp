@@ -189,13 +189,9 @@ constexpr int32_t TimeSpan::Compare(TimeSpan lhs, TimeSpan rhs) noexcept
 constexpr int32_t TimeSpan::CompareTo(TimeSpan value) const noexcept
 {
     if (_ticks > value._ticks)
-    {
         return 1;
-    }
     if (_ticks < value._ticks)
-    {
         return -1;
-    }
 
     return 0;
 }
@@ -322,7 +318,8 @@ constexpr TimeSpan TimeSpan::FromTicks(int64_t value) noexcept
 
 constexpr int64_t TimeSpan::TimeToTicks(int32_t hour, int32_t minute, int32_t second) noexcept
 {
-    const auto totalSeconds = (static_cast<int64_t>(hour) * 3600) + (static_cast<int64_t>(minute) * 60) * (static_cast<int64_t>(second));
+    auto totalSeconds = (static_cast<int64_t>(hour) * 3600) + (static_cast<int64_t>(minute) * 60) *
+        (static_cast<int64_t>(second));
     return totalSeconds * TicksPerSecond;
 }
 

@@ -210,16 +210,6 @@ TEST(DateTime, GetDayOfWeek)
 
 TEST(DateTime, DayOfYear)
 {
-    using namespace icu;
-
-    auto ww = DateTime::Now().ToString();
-    auto ww2 = DateTime::UtcNow().ToString(u"yyyy/MM/dd hh:mm:ss");
-
-    auto t1 = DateTime::Now().Ticks();
-    auto t2 = DateTime::UtcNow().Ticks();
-    auto s = Environment::GetStackTrace();
-    Debug::WriteLine(s);
-
     EXPECT_EQ(DateTime(2022, 2, 7, 23, 6, 47).DayOfYear(), 38);
     EXPECT_EQ(DateTime(2024, 3, 7, 23, 6, 47).DayOfYear(), 67);
     EXPECT_EQ(DateTime(1000, 12, 7, 23, 6, 47).DayOfYear(), 341);
