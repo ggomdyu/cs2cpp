@@ -12,16 +12,16 @@ public:
     TimeZoneInfo(std::u16string id, TimeSpan baseUtcOffset, std::u16string displayName, std::u16string standardDisplayName, std::u16string daylightDisplayName, bool supportsDaylightSavingTime) noexcept;
 
 public:
-    [[nodiscard]] static const TimeZoneInfo& Local();
-    [[nodiscard]] static const TimeZoneInfo& Utc() noexcept;
     [[nodiscard]] static DateTime ConvertTime(DateTime dateTime, const TimeZoneInfo& destinationTimeZone);
     [[nodiscard]] static DateTime ConvertTimeFromUtc(DateTime dateTime, const TimeZoneInfo& destinationTimeZone);
     [[nodiscard]] static DateTime ConvertTimeToUtc(DateTime dateTime);
-    [[nodiscard]] const std::u16string& GetId() const noexcept;
     [[nodiscard]] TimeSpan GetBaseUtcOffset() const noexcept;
-    [[nodiscard]] const std::u16string& GetStandardDisplayName() const noexcept;
-    [[nodiscard]] const std::u16string& GetDaylightDisplayName() const noexcept;
+    [[nodiscard]] std::u16string_view GetDaylightDisplayName() const noexcept;
+    [[nodiscard]] std::u16string_view GetStandardDisplayName() const noexcept;
+    [[nodiscard]] std::u16string_view GetId() const noexcept;
     [[nodiscard]] bool IsSupportDaylightSavingTime() const noexcept;
+    [[nodiscard]] static const TimeZoneInfo& Local();
+    [[nodiscard]] static const TimeZoneInfo& Utc();
 
 private:
     static DateTimeKind GetCorrespondingKind(const TimeZoneInfo& timeZone);

@@ -20,7 +20,7 @@ std::optional<passwd> GetNativeUserInfo()
 {
     passwd pwd{};
     passwd* tempPwd;
-    std::array<char, 1024> tempBuf{};
+    auto tempBuf = std::array<char, 1024>{};
 
     if (getpwuid_r(getuid(), &pwd, tempBuf.data(), tempBuf.size(), &tempPwd) != 0 || tempPwd == nullptr)
         return {};
@@ -132,13 +132,13 @@ void Environment::FailFast(std::u16string_view message)
 
 std::u16string Environment::GetStackTrace()
 {
-    auto addr = std::array<void*, 2048>{};
-    auto frameCount = backtrace(addr.data(), addr.size());
+    auto frames = std::array<void*, 2048>{};
+    auto frameCount = backtrace(frames.data(), frames.size());
     if (frameCount <= 0)
         return {};
 
     std::u16string stackTrace;
-    auto utf8Symbols = std::unique_ptr<char*, decltype(&std::free)>(backtrace_symbols(addr.data(), frameCount),
+    auto utf8Symbols = std::unique_ptr<char*, decltype(&std::free)>(backtrace_symbols(frames.data(), frameCount),
         &std::free);
   
     for (int i = 0; i < frameCount; ++i)

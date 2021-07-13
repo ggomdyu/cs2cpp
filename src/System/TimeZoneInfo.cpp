@@ -12,7 +12,7 @@ TimeZoneInfo::TimeZoneInfo(std::u16string id, TimeSpan baseUtcOffset, std::u16st
 {
 }
 
-const TimeZoneInfo& TimeZoneInfo::Utc() noexcept
+const TimeZoneInfo& TimeZoneInfo::Utc()
 {
     static auto timeZoneInfo = []()
     {
@@ -24,7 +24,7 @@ const TimeZoneInfo& TimeZoneInfo::Utc() noexcept
 
 DateTime TimeZoneInfo::ConvertTime(DateTime dateTime, const TimeZoneInfo& destinationTimeZone)
 {
-    if (dateTime.GetKind() == DateTimeKind::Utc)
+    if (dateTime.Kind() == DateTimeKind::Utc)
         return ConvertTime(dateTime, Utc(), destinationTimeZone);
 
     return ConvertTime(dateTime, Local(), destinationTimeZone);
@@ -40,7 +40,7 @@ DateTime TimeZoneInfo::ConvertTimeToUtc(DateTime dateTime)
     return ConvertTime(dateTime, Local(), TimeZoneInfo::Utc());
 }
 
-const std::u16string& TimeZoneInfo::GetId() const noexcept
+std::u16string_view TimeZoneInfo::GetId() const noexcept
 {
     return _id;
 }
@@ -50,12 +50,12 @@ TimeSpan TimeZoneInfo::GetBaseUtcOffset() const noexcept
     return _baseUtcOffset;
 }
 
-const std::u16string& TimeZoneInfo::GetStandardDisplayName() const noexcept
+std::u16string_view TimeZoneInfo::GetStandardDisplayName() const noexcept
 {
     return _standardDisplayName;
 }
 
-const std::u16string& TimeZoneInfo::GetDaylightDisplayName() const noexcept
+std::u16string_view TimeZoneInfo::GetDaylightDisplayName() const noexcept
 {
     return _daylightDisplayName;
 }
@@ -80,7 +80,7 @@ DateTime TimeZoneInfo::ConvertTime(DateTime dateTime, const TimeZoneInfo& source
 {
     // The kind of dateTime and sourceTimeZone must be the same.
     auto sourceKind = GetCorrespondingKind(sourceTimeZone);
-    if (dateTime.GetKind() != sourceKind)
+    if (dateTime.Kind() != sourceKind)
         return dateTime;
 
     // Filter the special case like UTC->UTC or Local->Local
@@ -89,9 +89,9 @@ DateTime TimeZoneInfo::ConvertTime(DateTime dateTime, const TimeZoneInfo& source
         return dateTime;
 
     // Convert the dateTime utc offset to 0.
-    auto ticks = dateTime.GetTicks() - sourceTimeZone.GetBaseUtcOffset().GetTicks();
+    auto ticks = dateTime.Ticks() - sourceTimeZone.GetBaseUtcOffset().Ticks();
     if (destinationKind == DateTimeKind::Local)
-        return DateTime(ticks + destinationTimeZone.GetBaseUtcOffset().GetTicks(), DateTimeKind::Local);
+        return DateTime(ticks + destinationTimeZone.GetBaseUtcOffset().Ticks(), DateTimeKind::Local);
 
     return DateTime(ticks, destinationKind);
 }

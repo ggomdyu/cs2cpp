@@ -76,7 +76,7 @@ std::optional<DateTime> File::GetCreationTimeUtc(std::u16string_view path)
     if (!s)
         return {};
 
-    return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_ctime);
+    return DateTime(DateTime::UnixEpoch().Ticks() + TimeSpan::TicksPerSecond * s->st_ctime);
 }
 
 std::optional<DateTime> File::GetLastAccessTimeUtc(std::u16string_view path)
@@ -85,7 +85,7 @@ std::optional<DateTime> File::GetLastAccessTimeUtc(std::u16string_view path)
     if (!s)
         return {};
 
-    return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_atime);
+    return DateTime(DateTime::UnixEpoch().Ticks() + TimeSpan::TicksPerSecond * s->st_atime);
 }
 
 std::optional<DateTime> File::GetLastWriteTimeUtc(std::u16string_view path)
@@ -94,7 +94,7 @@ std::optional<DateTime> File::GetLastWriteTimeUtc(std::u16string_view path)
     if (!s)
         return {};
 
-    return DateTime(DateTime::GetUnixEpoch().GetTicks() + TimeSpan::TicksPerSecond * s->st_mtime);
+    return DateTime(DateTime::UnixEpoch().Ticks() + TimeSpan::TicksPerSecond * s->st_mtime);
 }
 
 bool File::Move(std::u16string_view srcPath, std::u16string_view destPath)
@@ -108,7 +108,7 @@ bool File::Move(std::u16string_view srcPath, std::u16string_view destPath)
 
 bool File::Replace(std::u16string_view srcPath, std::u16string_view destPath, const std::u16string_view* destBackupPath, bool ignoreMetadataErrors)
 {
-    return ReplaceFileW(reinterpret_cast<LPCWSTR>(&destPath[0]), reinterpret_cast<LPCWSTR>(&srcPath[0]),
+    return !!ReplaceFileW(reinterpret_cast<LPCWSTR>(&destPath[0]), reinterpret_cast<LPCWSTR>(&srcPath[0]),
         destBackupPath ? reinterpret_cast<LPCWSTR>(&destBackupPath[0]) : nullptr,
         ignoreMetadataErrors ? REPLACEFILE_IGNORE_MERGE_ERRORS : 0, nullptr, nullptr);
 }
@@ -125,12 +125,9 @@ bool File::SetCreationTimeUtc(std::u16string_view path, DateTime creationTimeUtc
         return false;
 
     auto ticks = creationTimeUtc.ToFileTimeUtc();
+    FILETIME fileTime{static_cast<DWORD>(ticks), static_cast<DWORD>(ticks >> 32)};
 
-    auto fileTime = FILETIME{};
-    fileTime.dwLowDateTime = static_cast<DWORD>(ticks);
-    fileTime.dwHighDateTime = static_cast<DWORD>(ticks >> 32);
-
-    return SetFileTime(handle, &fileTime, nullptr, nullptr);
+    return !!SetFileTime(handle, &fileTime, nullptr, nullptr);
 }
 
 bool File::SetLastAccessTimeUtc(std::u16string_view path, DateTime lastAccessTimeUtc)
@@ -143,7 +140,7 @@ bool File::SetLastAccessTimeUtc(std::u16string_view path, DateTime lastAccessTim
     auto ticks = lastAccessTimeUtc.ToFileTimeUtc();
     FILETIME fileTime{static_cast<DWORD>(ticks), static_cast<DWORD>(ticks >> 32)};
 
-    return SetFileTime(handle, nullptr, &fileTime, nullptr);
+    return !!SetFileTime(handle, nullptr, &fileTime, nullptr);
 }
 
 bool File::SetLastWriteTimeUtc(std::u16string_view path, DateTime lastWriteTimeUtc)
@@ -156,7 +153,7 @@ bool File::SetLastWriteTimeUtc(std::u16string_view path, DateTime lastWriteTimeU
     auto ticks = lastWriteTimeUtc.ToFileTimeUtc();
     FILETIME fileTime{static_cast<DWORD>(ticks), static_cast<DWORD>(ticks >> 32)};
 
-    return SetFileTime(handle, nullptr, nullptr, &fileTime);
+    return !!SetFileTime(handle, nullptr, nullptr, &fileTime);
 }
 
 SafeFilePointer File::InternalFileOpen(std::u16string_view path, std::u16string_view mode)
