@@ -1,6 +1,7 @@
 #include <System/Environment.h>
 #include <System/IO/Directory.h>
 #include <System/IO/File.h>
+#include <System/TimeZoneInfo.h>
 #include <System/Random.h>
 #include <gtest/gtest.h>
 
@@ -250,7 +251,7 @@ TEST(File, SetCreationTime)
     File::SetCreationTime(file.GetPath(), dtl);
     EXPECT_EQ(File::GetCreationTime(file.GetPath()).value(), dtu);
     File::SetCreationTime(file.GetPath(), dtu);
-    EXPECT_EQ(File::GetCreationTime(file.GetPath()).value(), dtu.AddHours(9.0));
+    EXPECT_EQ(File::GetCreationTime(file.GetPath()).value(), dtu.AddHours(TimeZoneInfo::Local().GetBaseUtcOffset().Hours()));
     File::SetCreationTime(file.GetPath(), dtu2);
     EXPECT_EQ(File::GetCreationTime(file.GetPath()).value(), dtu);
 }
@@ -264,7 +265,7 @@ TEST(File, SetLastAccessTimeUtc)
     File::SetLastAccessTimeUtc(file.GetPath(), dtu);
     EXPECT_EQ(File::GetLastAccessTimeUtc(file.GetPath()).value(), dtu);
     File::SetLastAccessTimeUtc(file.GetPath(), dtl);
-    EXPECT_EQ(File::GetLastAccessTimeUtc(file.GetPath()).value(), dtu.AddHours(-9.0));
+    EXPECT_EQ(File::GetLastAccessTimeUtc(file.GetPath()).value(), dtu.AddHours(-TimeZoneInfo::Local().GetBaseUtcOffset().Hours()));
 }
 
 TEST(File, SetLastWriteTime)
@@ -276,7 +277,7 @@ TEST(File, SetLastWriteTime)
     File::SetLastWriteTime(file.GetPath(), dtl);
     EXPECT_EQ(File::GetLastWriteTime(file.GetPath()).value(), dtu);
     File::SetLastWriteTime(file.GetPath(), dtu);
-    EXPECT_EQ(File::GetLastWriteTime(file.GetPath()).value(), dtu.AddHours(9.0));
+    EXPECT_EQ(File::GetLastWriteTime(file.GetPath()).value(), dtu.AddHours(TimeZoneInfo::Local().GetBaseUtcOffset().Hours()));
 }
 
 TEST(File, SetLastWriteTimeUtc)
@@ -288,7 +289,7 @@ TEST(File, SetLastWriteTimeUtc)
     File::SetLastWriteTimeUtc(file.GetPath(), dtu);
     EXPECT_EQ(File::GetLastWriteTimeUtc(file.GetPath()).value(), dtu);
     File::SetLastWriteTimeUtc(file.GetPath(), dtl);
-    EXPECT_EQ(File::GetLastWriteTimeUtc(file.GetPath()).value(), dtu.AddHours(-9.0));
+    EXPECT_EQ(File::GetLastWriteTimeUtc(file.GetPath()).value(), dtu.AddHours(-TimeZoneInfo::Local().GetBaseUtcOffset().Hours()));
 }
 
 TEST(File, WriteAllBytes)
