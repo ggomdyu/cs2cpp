@@ -4,8 +4,6 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-extern std::array<wchar_t, 16384> GlobalWideCharBuffer;
-
 namespace detail::directory
 {
 
@@ -124,11 +122,10 @@ bool Directory::SetCurrentDirectory(std::u16string_view path)
 
 std::u16string Directory::GetCurrentDirectory()
 {
-    auto str = reinterpret_cast<const char16_t*>(GlobalWideCharBuffer.data());
-    auto strLen = static_cast<size_t>(GetCurrentDirectoryW(static_cast<DWORD>(GlobalWideCharBuffer.size()),
-        GlobalWideCharBuffer.data()));
+    auto str = std::array<WCHAR, 8192>{};
+    auto strLen = static_cast<size_t>(GetCurrentDirectoryW(str.size(), str.data()));
 
-    return std::u16string(str, strLen);
+    return std::u16string(reinterpret_cast<const char16_t*>(str.data()), strLen);
 }
 
 bool Directory::InternalCreateDirectory(std::u16string_view path)
