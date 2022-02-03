@@ -1,6 +1,7 @@
 #include "System/Environment.h"
 #include "System.IO/Directory.h"
 #include "System.IO/File.h"
+#include "System.IO/Path.h"
 
 CS2CPP_NAMESPACE_BEGIN
 
@@ -11,7 +12,7 @@ std::optional<DirectoryInfo> Directory::CreateDirectory(std::u16string_view path
         return std::nullopt;
     }
 
-    auto fullPath = Path::GetFullPath(path);
+    std::u16string fullPath = Path::GetFullPath(path);
     if (InternalCreateDirectory(fullPath))
     {
         return DirectoryInfo(std::move(fullPath), FullPathTag{});
@@ -25,7 +26,7 @@ std::optional<DirectoryInfo> Directory::CreateDirectory(std::u16string_view path
 
     for (size_t i = Path::IsDirectorySeparator(fullPath[0]) ? 1 : 0; i < fullPath.size(); ++i)
     {
-        auto c = fullPath[i];
+        char16_t c = fullPath[i];
         if (Path::IsDirectorySeparator(c))
         {
             fullPath[i] = 0;
@@ -46,17 +47,6 @@ std::optional<DirectoryInfo> Directory::CreateDirectory(std::u16string_view path
 bool Directory::SetCurrentDirectory(std::u16string_view path)
 {
     return Environment::SetCurrentDirectory(Path::GetFullPath(path));
-}
-
-std::optional<DirectoryInfo> Directory::GetParent(std::u16string_view path)
-{
-    if (path.empty())
-    {
-        return std::nullopt;
-    }
-
-    auto fullPath = Path::GetFullPath(path);
-    return DirectoryInfo(Path::GetDirectoryName(fullPath));
 }
 
 bool Directory::SetCreationTime(std::u16string_view path, DateTime creationTime)
@@ -129,12 +119,29 @@ std::u16string Directory::GetDirectoryRoot(std::u16string_view path)
     return Path::GetPathRoot(Path::GetFullPath(path));
 }
 
+std::vector<std::u16string> Directory::GetLogicalDrives()
+{
+    return Environment::GetLogicalDrives();
+}
+
+std::optional<DirectoryInfo> Directory::GetParent(std::u16string_view path)
+{
+    if (path.empty())
+    {
+        return std::nullopt;
+    }
+
+    std::u16string fullPath = Path::GetFullPath(path);
+    return DirectoryInfo(Path::GetDirectoryName(fullPath));
+}
+
 std::vector<std::u16string> Directory::GetDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
 {
     std::vector<std::u16string> ret;
-
-    auto callback = [&](std::u16string&& str) { ret.push_back(std::move(str)); };
-    EnumerateDirectories(path, searchPattern, searchOption, callback);
+    for (std::u16string_view path : EnumerateDirectories(path, searchPattern, searchOption))
+    {
+        ret.emplace_back(path);
+    }
 
     return ret;
 }
@@ -142,9 +149,10 @@ std::vector<std::u16string> Directory::GetDirectories(std::u16string_view path, 
 std::vector<std::u16string> Directory::GetFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
 {
     std::vector<std::u16string> ret;
-
-    auto callback = [&](std::u16string&& str) { ret.push_back(std::move(str)); };
-    EnumerateFiles(path, searchPattern, searchOption, callback);
+    for (std::u16string_view path : EnumerateFiles(path, searchPattern, searchOption))
+    {
+        ret.emplace_back(path);
+    }
 
     return ret;
 }
@@ -152,16 +160,57 @@ std::vector<std::u16string> Directory::GetFiles(std::u16string_view path, std::u
 std::vector<std::u16string> Directory::GetFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
 {
     std::vector<std::u16string> ret;
-
-    auto callback = [&](std::u16string&& str) { ret.push_back(std::move(str)); };
-    EnumerateFileSystemEntries(path, searchPattern, searchOption, callback);
+    for (std::u16string_view path : EnumerateFileSystemEntries(path, searchPattern, searchOption))
+    {
+        ret.emplace_back(path);
+    }
 
     return ret;
 }
 
-std::vector<std::u16string> Directory::GetLogicalDrives()
+DirectoryIterator Directory::EnumerateDirectories(std::u16string_view path)
 {
-    return Environment::GetLogicalDrives();
+    return FileSystemEnumerable::EnumerateDirectories(path);
+}
+
+DirectoryIterator Directory::EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern)
+{
+    return FileSystemEnumerable::EnumerateDirectories(path, searchPattern);
+}
+
+DirectoryIterator Directory::EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
+{
+    return FileSystemEnumerable::EnumerateDirectories(path, searchPattern, searchOption);
+}
+
+DirectoryIterator Directory::EnumerateFiles(std::u16string_view path)
+{
+    return FileSystemEnumerable::EnumerateFiles(path);
+}
+
+DirectoryIterator Directory::EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern)
+{
+    return FileSystemEnumerable::EnumerateFiles(path, searchPattern);
+}
+
+DirectoryIterator Directory::EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
+{
+    return FileSystemEnumerable::EnumerateFiles(path, searchPattern, searchOption);
+}
+
+DirectoryIterator Directory::EnumerateFileSystemEntries(std::u16string_view path)
+{
+    return FileSystemEnumerable::EnumerateFileSystemEntries(path);
+}
+
+DirectoryIterator Directory::EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern)
+{
+    return FileSystemEnumerable::EnumerateFileSystemEntries(path, searchPattern);
+}
+
+DirectoryIterator Directory::EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption)
+{
+    return FileSystemEnumerable::EnumerateFileSystemEntries(path, searchPattern, searchOption);
 }
 
 CS2CPP_NAMESPACE_END

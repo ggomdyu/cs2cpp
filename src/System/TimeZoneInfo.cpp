@@ -5,6 +5,26 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
+static std::vector<TimeZoneInfo> CreateTimeZoneInfos()
+{
+    std::vector<TimeZoneInfo> ret;
+    std::unique_ptr<icu::StringEnumeration, decltype(&free)> timeZoneIds(icu::TimeZone::createEnumeration(), free);
+
+    UErrorCode status = U_ZERO_ERROR;
+    while (true)
+    {
+        const icu::UnicodeString* timeZoneId = timeZoneIds->snext(status);
+        if (!timeZoneId || status != U_ZERO_ERROR)
+        {
+            break;
+        }
+
+        ret.emplace_back(icu::TimeZone::createTimeZone(*timeZoneId));
+    }
+
+    return ret;
+}
+
 TimeZoneInfo::TimeZoneInfo(icu::TimeZone* timeZone) noexcept :
     timeZone_(timeZone),
     id_(CreateId(timeZone)),
@@ -135,37 +155,18 @@ std::u16string_view TimeZoneInfo::ToString() const noexcept
 
 std::optional<TimeZoneInfo> TimeZoneInfo::FindSystemTimeZoneById(std::u16string_view id)
 {
-    auto timeZone = icu::TimeZone::createTimeZone({id.data(), static_cast<int32_t>(id.length())});
+    icu::TimeZone* timeZone = icu::TimeZone::createTimeZone({id.data(), static_cast<int32_t>(id.length())});
     if (*timeZone == icu::TimeZone::getUnknown())
     {
         return std::nullopt;
     }
 
-    return TimeZoneInfo(timeZone);
+    return std::optional<TimeZoneInfo>(timeZone);
 }
 
 ReadOnlySpan<TimeZoneInfo> TimeZoneInfo::GetSystemTimeZones()
 {
-    static std::vector<TimeZoneInfo> timeZoneInfos = []()
-    {
-        std::vector<TimeZoneInfo> ret;
-        std::unique_ptr<icu::StringEnumeration, decltype(&free)> timeZoneIds(icu::TimeZone::createEnumeration(), free);
-
-        auto status = U_ZERO_ERROR;
-        while (true)
-        {
-            auto timeZoneId = timeZoneIds->snext(status);
-            if (!timeZoneId || status != U_ZERO_ERROR)
-            {
-                break;
-            }
-
-            ret.push_back(TimeZoneInfo(icu::TimeZone::createTimeZone(*timeZoneId)));
-        }
-
-        return ret;
-    } ();
-
+    static std::vector<TimeZoneInfo> timeZoneInfos = CreateTimeZoneInfos();
     return timeZoneInfos;
 }
 
@@ -183,14 +184,13 @@ std::u16string TimeZoneInfo::CreateDisplayName(const icu::TimeZone* timeZone)
     timeZone->getDisplayName(false, icu::TimeZone::LONG_GMT, icu::Locale::getDefault(), displayName);
     timeZone->getDisplayName(false, icu::TimeZone::LONG, icu::Locale::getDefault(), id);
 
-    std::u16string ret;
-    ret.reserve(displayName.length() + id.length() + 3);
-    ret += u'(';
-    ret += std::u16string_view(displayName.getBuffer(), displayName.length());
-    ret += u") ";
-    ret += std::u16string_view(id.getBuffer(), id.length());
+    std::basic_stringstream<char16_t> ss;
+    ss << u'(';
+    ss << std::u16string_view(displayName.getBuffer(), displayName.length());
+    ss << u") ";
+    ss << std::u16string_view(id.getBuffer(), id.length());
 
-    return ret;
+    return ss.str();
 }
 
 std::u16string TimeZoneInfo::CreateStandardName(const icu::TimeZone* timeZone)

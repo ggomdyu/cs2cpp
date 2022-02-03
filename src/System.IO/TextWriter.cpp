@@ -10,7 +10,7 @@ TextWriter::TextWriter() :
 
 void TextWriter::Write(std::u16string_view value)
 {
-    WriteCore(value, false);
+    InternalWrite(value, false);
 }
 
 void TextWriter::Write(const char16_t* value)
@@ -25,7 +25,7 @@ void TextWriter::Write(bool value)
 
 void TextWriter::WriteLine(std::u16string_view value)
 {
-    WriteCore(value, true);
+    InternalWrite(value, true);
 }
 
 void TextWriter::WriteLine(const char16_t* value)

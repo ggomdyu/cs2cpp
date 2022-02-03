@@ -4,10 +4,7 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace
-{
-    
-std::u16string InternalGetCommandLine()
+static std::u16string InternalGetCommandLine()
 {
     std::u16string ret;
     for (std::u16string_view arg : Environment::GetCommandLineArgs())
@@ -24,11 +21,9 @@ std::u16string InternalGetCommandLine()
     return ret;
 }
 
-}
-
 std::u16string_view Environment::CommandLine()
 {
-    static auto commandLine = InternalGetCommandLine();
+    static std::u16string commandLine = InternalGetCommandLine();
     return commandLine;
 }
 

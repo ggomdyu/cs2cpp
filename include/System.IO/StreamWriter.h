@@ -1,9 +1,8 @@
 #pragma once
 
+#include "System.IO/Stream.h"
+#include "System.IO/TextWriter.h"
 #include "System.Text/Encoding.h"
-
-#include "Stream.h"
-#include "TextWriter.h"
 
 CS2CPP_NAMESPACE_BEGIN
 
@@ -37,16 +36,15 @@ public:
     void WriteLine(std::u16string_view value) override;
     void Flush() override;
     void Close() override;
-    std::shared_ptr<class Encoding> GetEncoding() const noexcept override;
+    std::shared_ptr<class Encoding> Encoding() const noexcept override;
     void SetAutoFlush(bool autoFlush) noexcept;
     bool GetAutoFlush() const noexcept;
     std::shared_ptr<Stream> GetBaseStream() const noexcept;
 
 private:
-    void WriteCore(std::u16string_view value, bool appendNewLine) override;
-    std::vector<char16_t>& GetCharBuffer();
-    std::vector<std::byte>& GetByteBuffer();
-    static std::shared_ptr<Stream> CreateFileStream(std::u16string_view path, bool append);
+    void InternalWrite(std::u16string_view value, bool appendNewLine) override;
+    Span<char16_t> GetCharBuffer();
+    Span<std::byte> GetByteBuffer();
 
 private:
     std::shared_ptr<Stream> stream_;
@@ -58,9 +56,6 @@ private:
     bool leaveOpen_;
     bool haveWrittenPreamble_;
     bool autoFlush_;
-
-    static constexpr int32_t DefaultBufferSize = 1024;
-    static constexpr int32_t DefaultFileStreamBufferSize = 4096;
 };
 
 CS2CPP_NAMESPACE_END

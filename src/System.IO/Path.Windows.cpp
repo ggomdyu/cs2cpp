@@ -32,8 +32,8 @@ std::u16string Path::GetPathRoot(std::u16string_view path)
 
 std::u16string Path::GetTempPath()
 {
-    auto path = std::array<WCHAR, 4096>{};
-    auto pathLen = GetTempPathW(static_cast<int>(path.size()), path.data());
+    std::array<WCHAR, 4096> path = {};
+    DWORD pathLen = GetTempPathW(static_cast<int>(path.size()), path.data());
 
     return std::u16string(reinterpret_cast<const char16_t*>(path.data()), static_cast<size_t>(pathLen));
 }

@@ -9,7 +9,7 @@ int32_t TextReader::Read(Span<char16_t> bytes)
     int32_t n = 0;
     for (; n < bytes.Length(); ++n)
     {
-        auto c = Read();
+        int32_t c = Read();
         if (c == -1)
         {
             break;
@@ -26,7 +26,7 @@ std::optional<std::u16string> TextReader::ReadLine()
     std::u16string ret;
     while (true)
     {
-        auto c = Read();
+        int32_t c = Read();
         if (c == -1)
         {
             break;
@@ -39,7 +39,7 @@ std::optional<std::u16string> TextReader::ReadLine()
                 Read();
             }
 
-            return {std::move(ret)};
+            return std::move(ret);
         }
 
         ret.push_back(c);
@@ -50,7 +50,7 @@ std::optional<std::u16string> TextReader::ReadLine()
         return std::nullopt;
     }
 
-    return {std::move(ret)};
+    return std::move(ret);
 }
 
 std::u16string TextReader::ReadToEnd()
@@ -59,7 +59,7 @@ std::u16string TextReader::ReadToEnd()
 
     std::array<char16_t, 4096> buffer{};
     int32_t readLen;
-    while ((readLen = Read(buffer)) != 0)
+    while ((readLen = Read(Span(buffer))) != 0)
     {
         ret.insert(ret.cend(), buffer.data(), buffer.data() + readLen);
     }

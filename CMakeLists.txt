@@ -1,53 +1,23 @@
 cmake_minimum_required(VERSION 3.8)
 
-include(CMakePackageConfigHelpers)
-include(cmake/vcpkg.cmake)
 include(cmake/options.cmake)
 
-project(cs2cpp VERSION 1.0.0)
-
+set(CMAKE_TOOLCHAIN_FILE vcpkg/scripts/buildsystems/vcpkg.cmake)
+set(CMAKE_MACOSX_RPATH ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(CMAKE_MACOSX_RPATH YES)
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+cmake_policy(SET CMP0079 NEW)
+
+project(cs2cpp)
 
 function(find_packages)
     find_package(FMT REQUIRED)
     find_package(ICU COMPONENTS i18n uc io data)
 endfunction()
 
-function(export_package)
-    set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/)
-    set(LIBRARIES ${CMAKE_BINARY_DIR})
-    
-    configure_package_config_file(
-        cmake/${PROJECT_NAME}-config.cmake.in
-        ${PROJECT_NAME}-config.cmake
-        INSTALL_DESTINATION ${CMAKE_BINARY_DIR}
-        PATH_VARS INCLUDE_DIR LIBRARIES
-    )
-
-    write_basic_package_version_file(
-        ${PROJECT_NAME}-config-version.cmake
-        VERSION ${PROJECT_VERSION}
-        COMPATIBILITY SameMajorVersion
-    )
-
-    install(
-        FILES ${PROJECT_NAME}-config.cmake ${PROJECT_NAME}-config-version.cmake
-        DESTINATION lib/${PROJECT_NAME}/cmake
-    )
-
-    export(
-        TARGETS cs2cpp ${ICU_LIBRARIES}
-        FILE ${PROJECT_NAME}-targets.cmake
-    )
-endfunction()
-
 function(init_subdirectories)
     add_library(cs2cpp cs2cpp.natvis)
     add_subdirectory(src)
     add_subdirectory(include)
-
     if (CS2CPP_ENABLE_TEST)
         enable_testing()
         add_subdirectory(test)
@@ -109,10 +79,6 @@ function(init_cs2cpp)
     init_include_directories()
     init_compile_definitions()
     init_link_libraries()
-
-    if (CS2CPP_ENABLE_INSTALL)
-        export_package()
-    endif()
 endfunction()
 
 init_cs2cpp()

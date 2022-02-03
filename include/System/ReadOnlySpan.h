@@ -8,19 +8,15 @@ template <typename T>
 class ReadOnlySpan final
 {
 public:
-    using Element = T;
-    using Pointer = T*;
-
-public:
     constexpr ReadOnlySpan() noexcept = default;
     constexpr ReadOnlySpan(const T* ptr, int32_t length) noexcept;
     template <int32_t N>
     constexpr ReadOnlySpan(const T (&arr)[N]) noexcept;
-    template <typename C, std::enable_if_t<detail::IsStdContainer<C>, int> = 0>
+    template <typename C, decltype(std::declval<C>().size(), std::declval<C>().data())* = nullptr>
     constexpr ReadOnlySpan(const C& container) noexcept;
 
 public:
-    constexpr operator const T*() const noexcept;
+    constexpr explicit operator const T*() const noexcept;
     constexpr const T& operator[](int32_t index) const noexcept;
     constexpr bool operator==(ReadOnlySpan rhs) const noexcept;
     constexpr bool operator!=(ReadOnlySpan rhs) const noexcept;
@@ -39,13 +35,13 @@ private:
 };
 
 template <typename T>
-ReadOnlySpan(T* ptr, int32_t length) -> ReadOnlySpan<T>;
+ReadOnlySpan(const T* ptr, int32_t length) -> ReadOnlySpan<T>;
 
 template <typename T, int32_t N>
-ReadOnlySpan(T (&arr)[N]) -> ReadOnlySpan<T>;
+ReadOnlySpan(const T (&arr)[N]) -> ReadOnlySpan<T>;
 
 template <typename C, typename E = std::remove_pointer_t<decltype(std::declval<C>().data())>>
-ReadOnlySpan(C& container) -> ReadOnlySpan<E>;
+ReadOnlySpan(const C& container) -> ReadOnlySpan<E>;
 
 template <typename T>
 constexpr ReadOnlySpan<T>::ReadOnlySpan(const T* ptr, int32_t length) noexcept :
@@ -62,7 +58,7 @@ constexpr ReadOnlySpan<T>::ReadOnlySpan(const T (&arr)[N]) noexcept :
 }
 
 template <typename T>
-template <typename C, std::enable_if_t<detail::IsStdContainer<C>, int>>
+template <typename C, decltype(std::declval<C>().size(), std::declval<C>().data())*>
 constexpr ReadOnlySpan<T>::ReadOnlySpan(const C& container) noexcept :
     ReadOnlySpan(container.data(), static_cast<int32_t>(container.size()))
 {
@@ -134,10 +130,7 @@ bool ReadOnlySpan<T>::CopyTo(Span<T> destination) const
 template <typename T>
 std::vector<T> ReadOnlySpan<T>::ToArray() const
 {
-    std::vector<T> ret(static_cast<size_t>(length_));
-    std::copy(storage_, storage_ + length_, ret.data());
-
-    return ret;
+    return std::vector<T>(storage_, storage_ + length_);
 }
 
 template <typename T>

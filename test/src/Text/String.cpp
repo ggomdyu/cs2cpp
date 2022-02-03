@@ -1,35 +1,36 @@
+//#include <array>
 //#include <gtest/gtest.h>
 //#include <System/String.h>
 //
-//using tg::String;
-//using tg::StringSplitOptions;
-//using tg::NormalizationForm;
+//using cs::String;
+//using cs::StringSplitOptions;
+//using cs::NormalizationForm;
 //
 //TEST(String, Compare)
 //{
-//    EXPECT_EQ(String::Compare(u"Hello", u"HELLop", true), -1);
-//    EXPECT_EQ(String::Compare(u"Hello", u"Hello", true), 0);
-//    EXPECT_EQ(String::Compare(u"Hello", u"HellO", true), 0);
-//    EXPECT_EQ(String::Compare(u"Hello", u"HELLp", true), -1);
-//    EXPECT_EQ(String::Compare(u"Helloppp", u"Hellop", true), 1);
-//    EXPECT_EQ(String::Compare(u"aa", u"ab", true), -1);
-//    EXPECT_EQ(String::Compare(u"ab", u"ac", true), -1);
-//    EXPECT_EQ(String::Compare(u"가나", u"가가", true), 1);
-//    EXPECT_EQ(String::Compare(u"가가", u"가나", true), -1);
-//    EXPECT_EQ(String::Compare(u"He", u"HE", false), -1);
-//    EXPECT_EQ(String::Compare(u"e", u"E", false), -1);
-//    EXPECT_EQ(String::Compare(u"e", u"D", false), 1);
-//    EXPECT_EQ(String::Compare(u"He", u"HE", true), 0);
-//    EXPECT_EQ(String::Compare(u"e", u"E", true), 0);
-//    EXPECT_EQ(String::Compare(u"e", u"D", true), 1);
-//    EXPECT_EQ(String::Compare(u"Hello", u"Hello", true), 0);
-//    EXPECT_EQ(String::Compare(u"Hello", u"HellO", true), 0);
-//    EXPECT_EQ(String::Compare(u"Hello", u"HELLp", true), -1);
-//    EXPECT_EQ(String::Compare(u"Helloppp", u"Hellop", true), 1);
-//    EXPECT_EQ(String::Compare(u"Hello", u"Hello", false), 0);
-//    EXPECT_EQ(String::Compare(u"Hello", u"HellO", false), -1);
-//    EXPECT_EQ(String::Compare(u"Hello", u"HELLp", false), -1);
-//    EXPECT_EQ(String::Compare(u"Helloppp", u"Hellop", false), 1);
+//   EXPECT_EQ(String::Compare(u"Hello", u"HELLop", true), -1);
+//   EXPECT_EQ(String::Compare(u"Hello", u"Hello", true), 0);
+//   EXPECT_EQ(String::Compare(u"Hello", u"HellO", true), 0);
+//   EXPECT_EQ(String::Compare(u"Hello", u"HELLp", true), -1);
+//   EXPECT_EQ(String::Compare(u"Helloppp", u"Hellop", true), 1);
+//   EXPECT_EQ(String::Compare(u"aa", u"ab", true), -1);
+//   EXPECT_EQ(String::Compare(u"ab", u"ac", true), -1);
+//   EXPECT_EQ(String::Compare(u"가나", u"가가", true), 1);
+//   EXPECT_EQ(String::Compare(u"가가", u"가나", true), -1);
+//   EXPECT_EQ(String::Compare(u"He", u"HE", false), -1);
+//   EXPECT_EQ(String::Compare(u"e", u"E", false), -1);
+//   EXPECT_EQ(String::Compare(u"e", u"D", false), 1);
+//   EXPECT_EQ(String::Compare(u"He", u"HE", true), 0);
+//   EXPECT_EQ(String::Compare(u"e", u"E", true), 0);
+//   EXPECT_EQ(String::Compare(u"e", u"D", true), 1);
+//   EXPECT_EQ(String::Compare(u"Hello", u"Hello", true), 0);
+//   EXPECT_EQ(String::Compare(u"Hello", u"HellO", true), 0);
+//   EXPECT_EQ(String::Compare(u"Hello", u"HELLp", true), -1);
+//   EXPECT_EQ(String::Compare(u"Helloppp", u"Hellop", true), 1);
+//   EXPECT_EQ(String::Compare(u"Hello", u"Hello", false), 0);
+//   EXPECT_EQ(String::Compare(u"Hello", u"HellO", false), -1);
+//   EXPECT_EQ(String::Compare(u"Hello", u"HELLp", false), -1);
+//   EXPECT_EQ(String::Compare(u"Helloppp", u"Hellop", false), 1);
 //}
 //
 //TEST(String, Concat)
@@ -375,54 +376,55 @@
 //
 //TEST(String, GetHashCode)
 //{
-//    EXPECT_EQ(String(u"").GetHashCode(), 0);
+//   EXPECT_EQ(String(u"").GetHashCode(), 0);
+//   EXPECT_NE(String(u"qwercqwe").GetHashCode(), 0);
 //}
 //
 //TEST(String, CopyTo)
 //{
-//    String str(u"QqQr楽");
+//   String str(u"QqQr楽");
 //
-//    std::array<char16_t, 32> charArray1{};
-//    str.CopyTo(0, charArray1, str.Length());
-//    EXPECT_EQ(charArray1[0], u'Q');
-//    EXPECT_EQ(charArray1[1], u'q');
-//    EXPECT_EQ(charArray1[2], u'Q');
-//    EXPECT_EQ(charArray1[3], u'r');
-//    EXPECT_EQ(charArray1[4], u'楽');
-//    EXPECT_EQ(charArray1[5], u'\0');
+//   std::array<char16_t, 32> charArray1{};
+//   str.CopyTo(0, charArray1, str.Length());
+//   EXPECT_EQ(charArray1[0], u'Q');
+//   EXPECT_EQ(charArray1[1], u'q');
+//   EXPECT_EQ(charArray1[2], u'Q');
+//   EXPECT_EQ(charArray1[3], u'r');
+//   EXPECT_EQ(charArray1[4], u'楽');
+//   EXPECT_EQ(charArray1[5], u'\0');
 //
-//    std::array<char16_t, 32> charArray2{};
-//    str.CopyTo(0, charArray2, str.Length() - 1);
-//    EXPECT_EQ(charArray2[0], u'Q');
-//    EXPECT_EQ(charArray2[1], u'q');
-//    EXPECT_EQ(charArray2[2], u'Q');
-//    EXPECT_EQ(charArray2[3], u'r');
-//    EXPECT_EQ(charArray2[4], u'\0');
+//   std::array<char16_t, 32> charArray2{};
+//   str.CopyTo(0, charArray2, str.Length() - 1);
+//   EXPECT_EQ(charArray2[0], u'Q');
+//   EXPECT_EQ(charArray2[1], u'q');
+//   EXPECT_EQ(charArray2[2], u'Q');
+//   EXPECT_EQ(charArray2[3], u'r');
+//   EXPECT_EQ(charArray2[4], u'\0');
 //
-//    String str2(u" 가 a");
-//    std::array<char16_t, 32> charArray3{};
-//    str2.CopyTo(0, charArray3, str2.Length() - 1);
-//    EXPECT_EQ(charArray3[0], u' ');
-//    EXPECT_EQ(charArray3[1], u'가');
-//    EXPECT_EQ(charArray3[2], u' ');
-//    EXPECT_EQ(charArray3[3], u'\0');
+//   String str2(u" 가 a");
+//   std::array<char16_t, 32> charArray3{};
+//   str2.CopyTo(0, charArray3, str2.Length() - 1);
+//   EXPECT_EQ(charArray3[0], u' ');
+//   EXPECT_EQ(charArray3[1], u'가');
+//   EXPECT_EQ(charArray3[2], u' ');
+//   EXPECT_EQ(charArray3[3], u'\0');
 //}
 //
 //TEST(String, ToCharArray)
 //{
-//    auto charArray = String(u"a안녕tacc").ToCharArray();
-//    EXPECT_EQ(charArray[0], u'a');
-//    EXPECT_EQ(charArray[1], u'안');
-//    EXPECT_EQ(charArray[2], u'녕');
-//    EXPECT_EQ(charArray[3], u't');
-//    EXPECT_EQ(charArray[4], u'a');
-//    EXPECT_EQ(charArray[5], u'c');
-//    EXPECT_EQ(charArray[6], u'c');
-//    EXPECT_EQ(charArray.size(), 7);
+//   auto charArray = String(u"a안녕tacc").ToCharArray();
+//   EXPECT_EQ(charArray[0], u'a');
+//   EXPECT_EQ(charArray[1], u'안');
+//   EXPECT_EQ(charArray[2], u'녕');
+//   EXPECT_EQ(charArray[3], u't');
+//   EXPECT_EQ(charArray[4], u'a');
+//   EXPECT_EQ(charArray[5], u'c');
+//   EXPECT_EQ(charArray[6], u'c');
+//   EXPECT_EQ(charArray.size(), 7);
 //
-//    auto charArray2 = String(u"a안녕tacc").ToCharArray(1,3);
-//    EXPECT_EQ(charArray2[0], u'안');
-//    EXPECT_EQ(charArray2[1], u'녕');
-//    EXPECT_EQ(charArray2[2], u't');
-//    EXPECT_EQ(charArray2.size(), 3);
+//   auto charArray2 = String(u"a안녕tacc").ToCharArray(1,3);
+//   EXPECT_EQ(charArray2[0], u'안');
+//   EXPECT_EQ(charArray2[1], u'녕');
+//   EXPECT_EQ(charArray2[2], u't');
+//   EXPECT_EQ(charArray2.size(), 3);
 //}

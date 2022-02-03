@@ -18,12 +18,9 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace
-{
-
 thread_local std::u16string NullTerminatedStr;
 
-std::u16string InternalGetHomeDirectory()
+static std::u16string InternalGetHomeDirectory()
 {
     struct passwd pw{};
     struct passwd* result = nullptr;
@@ -37,12 +34,12 @@ std::u16string InternalGetHomeDirectory()
     return Encoding::UTF8().GetString(bytes).value_or(std::u16string());
 }
 
-std::u16string InternalReadXdgUserDir(std::u16string_view key, std::u16string_view fallback)
+static std::u16string InternalReadXdgUserDir(std::u16string_view key, std::u16string_view fallback)
 {
     return Environment::GetEnvironmentVariable(key).value_or(Path::Combine(InternalGetHomeDirectory(), fallback));
 }
 
-std::u16string InternalCreateOSVersionString()
+static std::u16string InternalCreateOSVersionString()
 {
     utsname name{};
     if (uname(&name) == -1)
@@ -55,7 +52,7 @@ std::u16string InternalCreateOSVersionString()
 }
 
 #if CS2CPP_PLATFORM_DARWIN
-std::vector<std::u16string> InternalGetLogicalDrives()
+static std::vector<std::u16string> InternalGetLogicalDrives()
 {
     std::vector<std::u16string> logicalDrives;
     struct statfs* m = nullptr;
@@ -74,7 +71,7 @@ std::vector<std::u16string> InternalGetLogicalDrives()
     return logicalDrives;
 }
 #else
-std::vector<std::u16string> InternalGetLogicalDrives(std::u16string_view text, int32_t tokenNum)
+static std::vector<std::u16string> InternalGetLogicalDrives(std::u16string_view text, int32_t tokenNum)
 {
     std::vector<std::u16string> ret;
 
@@ -106,20 +103,18 @@ std::vector<std::u16string> InternalGetLogicalDrives(std::u16string_view text, i
 #endif
 
 #if CS2CPP_PLATFORM_LINUX
-std::vector<std::u16string> InternalGetCommandLineArgs()
+static std::vector<std::u16string> InternalGetCommandLineArgs()
 {
     auto bytes = File::ReadAllBytes(u"/proc/self/cmdline");
 
     return {};
 }
 #else
-std::vector<std::u16string> InternalGetCommandLineArgs()
+static std::vector<std::u16string> InternalGetCommandLineArgs()
 {
     return {};
 }
 #endif
-
-}
 
 int32_t Environment::CurrentManagedThreadId()
 {

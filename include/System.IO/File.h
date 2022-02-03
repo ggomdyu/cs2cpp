@@ -69,10 +69,8 @@ public:
     static bool WriteAllText(std::u16string_view path, std::u16string_view contents, const Encoding& encoding);
 
 private:
-    static SafeFilePointer InternalFileOpen(std::u16string_view path, std::u16string_view mode);
     static void InternalWriteAllLines(StreamWriter& writer, ReadOnlySpan<std::u16string_view> contents);
     static void InternalWriteAllText(StreamWriter& writer, std::u16string_view contents);
-    static ReadOnlySpan<std::byte> RemoveByteOrderMark(ReadOnlySpan<std::byte> bytes, const Encoding& encoding) noexcept;
 };
 
 template <typename F>

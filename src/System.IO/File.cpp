@@ -3,10 +3,7 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace
-{
-
-DateTime GetUtcDateTime(DateTime dateTime)
+static DateTime GetUtcDateTime(DateTime dateTime)
 {
     if (dateTime.Kind() == DateTimeKind::Unspecified)
     {
@@ -16,11 +13,31 @@ DateTime GetUtcDateTime(DateTime dateTime)
     return dateTime.ToUniversalTime();
 }
 
+static ReadOnlySpan<std::byte> RemoveByteOrderMark(ReadOnlySpan<std::byte> bytes, const Encoding& encoding) noexcept
+{
+    auto preamble = encoding.Preamble();
+    if (preamble.Length() > bytes.Length())
+    {
+        return bytes;
+    }
+
+    int32_t j = 0;
+    for (int32_t i = 0; i < preamble.Length(); ++i)
+    {
+        if (preamble[i] != std::byte(bytes[i]))
+        {
+            break;
+        }
+
+        ++j;
+    }
+
+    return bytes.Slice(j);
 }
 
 bool File::AppendAllLines(std::u16string_view path, ReadOnlySpan<std::u16string_view> contents)
 {
-    auto sw = StreamWriter::Create(path, true);
+    std::optional<StreamWriter> sw = StreamWriter::Create(path, true);
     if (!sw)
     {
         return false;
@@ -32,7 +49,7 @@ bool File::AppendAllLines(std::u16string_view path, ReadOnlySpan<std::u16string_
 
 bool File::AppendAllLines(std::u16string_view path, ReadOnlySpan<std::u16string_view> contents, const Encoding& encoding)
 {
-    auto sw = StreamWriter::Create(path, true, encoding);
+    std::optional<StreamWriter> sw = StreamWriter::Create(path, true, encoding);
     if (!sw)
     {
         return false;
@@ -284,7 +301,7 @@ bool File::WriteAllText(std::u16string_view path, std::u16string_view contents, 
 
 void File::InternalWriteAllLines(StreamWriter& writer, ReadOnlySpan<std::u16string_view> contents)
 {
-    for (decltype(auto) content : contents)
+    for (std::u16string_view content : contents)
     {
         writer.WriteLine(content);
     }
@@ -296,28 +313,6 @@ void File::InternalWriteAllText(StreamWriter& writer, std::u16string_view conten
 {
     writer.Write(contents);
     writer.Close();
-}
-
-ReadOnlySpan<std::byte> File::RemoveByteOrderMark(ReadOnlySpan<std::byte> bytes, const Encoding& encoding) noexcept
-{
-    auto preamble = encoding.Preamble();
-    if (preamble.Length() > bytes.Length())
-    {
-        return bytes;
-    }
-
-    int32_t j = 0;
-    for (int32_t i = 0; i < preamble.Length(); ++i)
-    {
-        if (preamble[i] != std::byte(bytes[i]))
-        {
-            break;
-        }
-
-        ++j;
-    }
-
-    return bytes.Slice(j);
 }
 
 CS2CPP_NAMESPACE_END

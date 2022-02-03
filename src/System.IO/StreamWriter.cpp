@@ -3,6 +3,15 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
+constexpr int32_t DefaultBufferSize = 1024;
+constexpr int32_t DefaultFileStreamBufferSize = 4096;
+
+static std::shared_ptr<FileStream> CreateFileStream(std::u16string_view path, bool append)
+{
+    FileMode fileMode = append ? FileMode::Append : FileMode::Create;
+    return FileStream::Create(path, fileMode, FileAccess::Write, FileShare::Read, FileOptions::SequentialScan, DefaultFileStreamBufferSize);
+}
+
 StreamWriter::StreamWriter(std::shared_ptr<Stream> stream) noexcept :
     StreamWriter(std::move(stream), Encoding::UTF8(), DefaultBufferSize, false, false)
 {
@@ -41,7 +50,7 @@ std::optional<StreamWriter> StreamWriter::Create(std::u16string_view path)
 
 std::optional<StreamWriter> StreamWriter::Create(std::u16string_view path, bool append)
 {
-    auto fs = CreateFileStream(path, append);
+    std::shared_ptr<FileStream> fs = CreateFileStream(path, append);
     if (!fs)
     {
         return std::nullopt;
@@ -58,7 +67,7 @@ std::optional<StreamWriter> StreamWriter::Create(std::u16string_view path, bool 
 
 std::optional<StreamWriter> StreamWriter::Create(std::u16string_view path, bool append, const class Encoding& encoding, int32_t bufferSize)
 {
-    auto fs = CreateFileStream(path, append);
+    std::shared_ptr<FileStream> fs = CreateFileStream(path, append);
     if (!fs)
     {
         return std::nullopt;
@@ -70,15 +79,15 @@ std::optional<StreamWriter> StreamWriter::Create(std::u16string_view path, bool 
 
 void StreamWriter::Write(std::u16string_view value)
 {
-    WriteCore(value, false);
+    InternalWrite(value, false);
 }
 
 void StreamWriter::WriteLine(std::u16string_view value)
 {
-    WriteCore(value, true);
+    InternalWrite(value, true);
 }
 
-std::shared_ptr<Encoding> StreamWriter::GetEncoding() const noexcept
+std::shared_ptr<Encoding> StreamWriter::Encoding() const noexcept
 {
     return encoding_;
 }
@@ -104,11 +113,11 @@ void StreamWriter::Flush()
         }
     }
 
-    auto& byteBuffer = GetByteBuffer();
-    auto convertedBytes = encoding_->GetBytes(ReadOnlySpan(GetCharBuffer().data(), charPos_), byteBuffer);
+    Span<std::byte> byteBuffer = GetByteBuffer();
+    std::optional<int> convertedBytes = encoding_->GetBytes(ReadOnlySpan(&GetCharBuffer()[0], charPos_), Span(byteBuffer));
     if (convertedBytes && *convertedBytes > 0)
     {
-        stream_->Write({byteBuffer.data(), *convertedBytes});
+        stream_->Write({&byteBuffer[0], *convertedBytes});
     }
 
     stream_->Flush();
@@ -126,7 +135,7 @@ void StreamWriter::Close()
     stream_->Close();
 }
 
-std::vector<std::byte>& StreamWriter::GetByteBuffer()
+Span<std::byte> StreamWriter::GetByteBuffer()
 {
     if (byteBuffer_.empty())
     {
@@ -136,22 +145,22 @@ std::vector<std::byte>& StreamWriter::GetByteBuffer()
     return byteBuffer_;
 }
 
-void StreamWriter::WriteCore(std::u16string_view value, bool appendNewLine)
+void StreamWriter::InternalWrite(std::u16string_view value, bool appendNewLine)
 {
-    auto& charBuffer = GetCharBuffer();
+    Span<char16_t> charBuffer = GetCharBuffer();
 
     auto writeCore = [&](std::u16string_view value)
     {
         while (!value.empty())
         {
-            if (charPos_ == charBuffer.size())
+            if (charPos_ == charBuffer.Length())
             {
                 Flush();
             }
 
-            auto leftBufferSize = charBuffer.size() - charPos_;
-            auto copyAvailableSize = std::min(value.size(), leftBufferSize);
-            memcpy(charBuffer.data() + charPos_, value.data(), copyAvailableSize * sizeof(char16_t));
+            auto leftBufferSize = charBuffer.Length() - charPos_;
+            auto copyAvailableSize = std::min(static_cast<int32_t>(value.size()), leftBufferSize);
+            memcpy(&charBuffer[0] + charPos_, value.data(), copyAvailableSize * sizeof(char16_t));
 
             value = value.substr(copyAvailableSize);
             charPos_ += static_cast<int32_t>(copyAvailableSize);
@@ -170,7 +179,7 @@ void StreamWriter::WriteCore(std::u16string_view value, bool appendNewLine)
     }
 }
 
-std::vector<char16_t>& StreamWriter::GetCharBuffer()
+Span<char16_t> StreamWriter::GetCharBuffer()
 {
     if (charBuffer_.empty())
     {
@@ -178,12 +187,6 @@ std::vector<char16_t>& StreamWriter::GetCharBuffer()
     }
 
     return charBuffer_;
-}
-
-std::shared_ptr<Stream> StreamWriter::CreateFileStream(std::u16string_view path, bool append)
-{
-    return FileStream::Create(path, append ? FileMode::Append : FileMode::Create, FileAccess::Write,
-        FileShare::Read, FileOptions::SequentialScan, DefaultFileStreamBufferSize);
 }
 
 void StreamWriter::SetAutoFlush(bool autoFlush) noexcept

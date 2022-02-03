@@ -7,9 +7,6 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace detail
-{
-
 std::optional<struct stat> CreateStat(const std::u16string& path)
 {
     auto utf8Path = Encoding::UTF8().GetBytes(path);
@@ -27,7 +24,7 @@ std::optional<struct stat> CreateStat(const std::u16string& path)
     return s;
 }
 
-bool IsReadOnly(const struct stat& s) noexcept
+static bool IsReadOnlyStat(const struct stat& s) noexcept
 {
     if (s.st_uid == geteuid())
     {
@@ -39,8 +36,6 @@ bool IsReadOnly(const struct stat& s) noexcept
     }
 
     return (s.st_mode & S_IROTH) != 0 && (s.st_mode & S_IWOTH) == 0;
-}
-
 }
 
 bool File::Decrypt([[maybe_unused]] std::u16string_view path)
@@ -67,20 +62,20 @@ bool File::Encrypt([[maybe_unused]] std::u16string_view path)
 
 bool File::Exists(std::u16string_view path)
 {
-    auto s = detail::CreateStat(Path::GetFullPath(path));
+    auto s = CreateStat(Path::GetFullPath(path));
     return s && S_ISREG(s->st_mode);
 }
 
 std::optional<FileAttributes> File::GetAttributes(std::u16string_view path)
 {
-    auto s = detail::CreateStat(Path::GetFullPath(path));
+    auto s = CreateStat(Path::GetFullPath(path));
     if (!s)
     {
         return std::nullopt;
     }
 
     size_t attributes = 0;
-    if (detail::IsReadOnly(*s))
+    if (IsReadOnly(*s))
     {
         attributes |= static_cast<size_t>(FileAttributes::ReadOnly);
     }
@@ -102,7 +97,7 @@ std::optional<FileAttributes> File::GetAttributes(std::u16string_view path)
 
 std::optional<DateTime> File::GetCreationTimeUtc(std::u16string_view path)
 {
-    auto s = detail::CreateStat(std::u16string(path));
+    auto s = CreateStat(std::u16string(path));
     if (!s)
     {
         return std::nullopt;
@@ -117,7 +112,7 @@ std::optional<DateTime> File::GetCreationTimeUtc(std::u16string_view path)
 
 std::optional<DateTime> File::GetLastAccessTimeUtc(std::u16string_view path)
 {
-    auto s = detail::CreateStat(path);
+    auto s = CreateStat(path);
     if (!s)
     {
         return std::nullopt;
@@ -132,7 +127,7 @@ std::optional<DateTime> File::GetLastAccessTimeUtc(std::u16string_view path)
 
 std::optional<DateTime> File::GetLastWriteTimeUtc(std::u16string_view path)
 {
-    auto s = detail::CreateStat(path);
+    auto s = CreateStat(path);
     if (!s)
     {
         return std::nullopt;
@@ -154,8 +149,14 @@ bool File::Move(std::u16string_view srcPath, std::u16string_view destPath)
         return false;
     }
 
-    auto s = detail::CreateStat(*utf8SrcFullPath);
+    auto s = CreateStat(*utf8SrcFullPath);
     if (!s || !S_ISREG(s->st_mode))
+    {
+        return false;
+    }
+
+    std::optional<std::vector<std::byte>> utf8SrcFullPath = Encoding::UTF8().GetBytes(srcFullPath);
+    if (!utf8SrcFullPath)
     {
         return false;
     }
@@ -179,13 +180,14 @@ bool File::SetAttributes(std::u16string_view path, FileAttributes fileAttributes
         return false;
     }
 
-    auto s = detail::CreateStat(*utf8FullPath);
+    auto s = CreateStat(*utf8FullPath);
     if (!s || !S_ISREG(s->st_mode))
     {
         return false;
     }
 
-    // Hide the file if the hidden attribute is specified
+#if CS2CPP_PLATFORM_DARWIN
+    // Set the hide file option.
     if (static_cast<size_t>(fileAttributes) & static_cast<size_t>(FileAttributes::Hidden))
     {
         lchflags(reinterpret_cast<const char*>(utf8FullPath->data()), s->st_flags | UF_HIDDEN);
@@ -194,6 +196,7 @@ bool File::SetAttributes(std::u16string_view path, FileAttributes fileAttributes
     {
         lchflags(reinterpret_cast<const char*>(utf8FullPath->data()), s->st_flags & (~UF_HIDDEN));
     }
+#endif
 
     // Set the file mode
     auto newMode = s->st_mode;
@@ -204,6 +207,12 @@ bool File::SetAttributes(std::u16string_view path, FileAttributes fileAttributes
     else if ((newMode & S_IRUSR) != 0)
     {
         newMode |= S_IWUSR;
+    }
+
+    std::optional<std::vector<std::byte>> utf8FullPath = Encoding::UTF8().GetBytes(fullPath);
+    if (!utf8FullPath)
+    {
+        return false;
     }
 
     return chmod(reinterpret_cast<const char*>(utf8FullPath->data()), newMode) == 0;

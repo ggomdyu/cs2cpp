@@ -1,5 +1,7 @@
-#include <System.IO/Directory.h>
 #include <gtest/gtest.h>
+
+#include "System.IO/Directory.h"
+#include "System.IO/Path.h"
 
 using namespace CS2CPP_NAMESPACE_NAME;
 

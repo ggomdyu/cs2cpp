@@ -6,18 +6,13 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace
-{
-
-std::u16string Format(int64_t ticks, icu::DateFormat& formatter)
+static std::u16string Format(int64_t ticks, icu::DateFormat& formatter)
 {
     icu::UnicodeString formatted;
     formatter.setTimeZone(*icu::TimeZone::getGMT());
     formatter.format(static_cast<UDate>(ticks - DateTime::UnixEpoch().Ticks()) / TimeSpan::TicksPerMillisecond, formatted);
 
     return {formatted.getBuffer(), static_cast<size_t>(formatted.length())};
-}
-
 }
 
 DateTime& DateTime::operator+=(TimeSpan rhs) noexcept

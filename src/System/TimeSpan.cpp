@@ -5,10 +5,7 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace
-{
-
-std::u16string Format(int64_t ticks, std::u16string_view format)
+static std::u16string Format(int64_t ticks, std::u16string_view format)
 {
     UErrorCode status = U_ZERO_ERROR;
 
@@ -22,9 +19,7 @@ std::u16string Format(int64_t ticks, std::u16string_view format)
     formatter.setTimeZone(*icu::TimeZone::getGMT());
     formatter.format(static_cast<UDate>(ticks) / TimeSpan::TicksPerMillisecond, formatted);
 
-    return std::u16string(formatted.getBuffer(), static_cast<size_t>(formatted.length()));
-}
-
+    return {formatted.getBuffer(), static_cast<size_t>(formatted.length())};
 }
 
 std::u16string TimeSpan::ToString() const

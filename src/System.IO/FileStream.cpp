@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "System.IO/FileStream.h"
 #include "System.IO/Path.h"
 
@@ -93,8 +95,8 @@ std::shared_ptr<FileStream> FileStream::Create(std::u16string_view path, FileMod
         return nullptr;
     }
 
-    auto fullPath = Path::GetFullPath(path);
-    auto fileHandle = InternalOpenHandle(fullPath, mode, access, share, options);
+    std::u16string fullPath = Path::GetFullPath(path);
+    void* fileHandle = InternalOpenHandle(fullPath, mode, access, share, options);
     if (fileHandle == NullFileHandle)
     {
         return nullptr;
@@ -212,12 +214,12 @@ int32_t FileStream::Read(Span<std::byte> bytes)
         return 0;
     }
 
-    auto leftReadBufferSpace = readLen_ - readPos_;
+    int32_t leftReadBufferSpace = readLen_ - readPos_;
     if (leftReadBufferSpace == 0)
     {
         FlushWriteBuffer();
 
-        auto readBytes = InternalRead({&GetBuffer()[0], bufferSize_});
+        int32_t readBytes = InternalRead({&GetBuffer()[0], bufferSize_});
         readPos_ = 0;
         readLen_ = leftReadBufferSpace = readBytes;
 
@@ -227,7 +229,7 @@ int32_t FileStream::Read(Span<std::byte> bytes)
         }
     }
 
-    auto copiedBytes = std::min(leftReadBufferSpace, bytes.Length());
+    int32_t copiedBytes = std::min(leftReadBufferSpace, bytes.Length());
     memcpy(&bytes[0], &buffer_[0] + readPos_, copiedBytes);
 
     readPos_ += copiedBytes;
@@ -247,7 +249,7 @@ int32_t FileStream::ReadByte()
     {
         FlushWriteBuffer();
 
-        auto readBytes = InternalRead({&GetBuffer()[0], bufferSize_});
+        int32_t readBytes = InternalRead({&GetBuffer()[0], bufferSize_});
         readPos_ = 0;
         readLen_ = readBytes;
 
@@ -274,15 +276,15 @@ bool FileStream::Write(ReadOnlySpan<std::byte> bytes)
         int32_t numBytes = bufferSize_ - writePos_;
         if (numBytes > 0)
         {
-            // If the specified buffer can be stored into the m_buffer directly
+            // If the specified buffer can be stored into the buffer directly
             if (bytes.Length() <= numBytes)
             {
-                memcpy(&GetBuffer()[writePos_], bytes, bytes.Length());
+                memcpy(&GetBuffer()[writePos_], &bytes[0], bytes.Length());
                 writePos_ += bytes.Length();
                 return true;
             }
 
-            memcpy(&GetBuffer()[writePos_], bytes, static_cast<size_t>(numBytes));
+            memcpy(&GetBuffer()[writePos_], &bytes[0], static_cast<size_t>(numBytes));
             writePos_ += numBytes;
             bytes = bytes.Slice(numBytes);
         }
@@ -296,7 +298,7 @@ bool FileStream::Write(ReadOnlySpan<std::byte> bytes)
         return true;
     }
 
-    memcpy(&GetBuffer()[writePos_], bytes, bytes.Length());
+    memcpy(&GetBuffer()[writePos_], &bytes[0], bytes.Length());
     writePos_ += bytes.Length();
 
     return true;
@@ -328,7 +330,7 @@ void FileStream::FlushReadBuffer()
         return;
     }
 
-    // We must rewind the seek pointer if a write occurred.
+    // Rewind the seek pointer if write occurred.
     int32_t rewindOffset = readPos_ - readLen_;
     if (rewindOffset != 0)
     {

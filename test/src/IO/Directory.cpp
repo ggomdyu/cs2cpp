@@ -1,8 +1,10 @@
-#include <System/Environment.h>
-#include <System/Random.h>
-#include <System.IO/Directory.h>
-#include <System.IO/File.h>
 #include <gtest/gtest.h>
+
+#include "System/Environment.h"
+#include "System/Random.h"
+#include "System.IO/Directory.h"
+#include "System.IO/File.h"
+#include "System.IO/Path.h"
 
 #include "TempDirectory.h"
 
@@ -126,11 +128,10 @@ TEST(Directory, GetDirectories)
     EXPECT_EQ(directories2.size(), 4);
 
     auto directories3 = Directory::GetDirectories(directory.GetPath(), u"*abc*", SearchOption::AllDirectories);
-    EXPECT_EQ(directories3.size(), 2);
-    if (directories3.size() == 2)
+    EXPECT_EQ(directories3.size(), 1);
+    if (directories3.size() == 1)
     {
         EXPECT_EQ(directories3[0], directory4.GetPath());
-        EXPECT_EQ(directories3[1], directory5.GetPath());
     }
 }
 
@@ -285,14 +286,13 @@ TEST(Directory, EnumerateDirectories)
     TempDirectory directory5(Directory::CreateDirectory(Path::Combine(directory4.GetPath(), Path::GetRandomFileName()))->ToString());
     auto file4 = directory5.AddTempFile();
 
-    std::vector<std::u16string> ret;
-    auto callback = [&](std::u16string&& str) { ret.push_back(std::move(str)); return false; };
-    Directory::EnumerateDirectories(directory.GetPath(), u"*", SearchOption::TopDirectoryOnly, callback);
+    auto it = Directory::EnumerateDirectories(directory.GetPath(), u"*", SearchOption::TopDirectoryOnly);
+    std::vector<std::u16string> ret(begin(it), end(it));
     EXPECT_EQ(ret.size(), 1);
 
-    ret.clear();
-    Directory::EnumerateDirectories(directory.GetPath(), u"*", SearchOption::AllDirectories, callback);
-    EXPECT_EQ(ret.size(), 4);
+    it = Directory::EnumerateDirectories(directory.GetPath(), u"*", SearchOption::AllDirectories);
+    std::vector<std::u16string> ret2(begin(it), end(it));
+    EXPECT_EQ(ret2.size(), 4);
 }
 
 TEST(Directory, EnumerateFiles)
@@ -312,14 +312,13 @@ TEST(Directory, EnumerateFiles)
     TempDirectory directory5(Directory::CreateDirectory(Path::Combine(directory4.GetPath(), Path::GetRandomFileName()))->ToString());
     auto file4 = directory5.AddTempFile();
 
-    std::vector<std::u16string> ret;
-    auto callback = [&](std::u16string&& str) { ret.push_back(std::move(str)); return false; };
-    Directory::EnumerateFiles(directory.GetPath(), u"*", SearchOption::TopDirectoryOnly, callback);
+    auto it = Directory::EnumerateFiles(directory.GetPath(), u"*", SearchOption::TopDirectoryOnly);
+    std::vector<std::u16string> ret{begin(it), end(it)};
     EXPECT_EQ(ret.size(), 3);
 
-    ret.clear();
-    Directory::EnumerateFiles(directory.GetPath(), u"*", SearchOption::AllDirectories, callback);
-    EXPECT_EQ(ret.size(), 9);
+    it = Directory::EnumerateFiles(directory.GetPath(), u"*", SearchOption::AllDirectories);
+    std::vector<std::u16string> ret2{begin(it), end(it)};
+    EXPECT_EQ(ret2.size(), 9);
 }
 
 TEST(Directory, EnumerateFileSystemEntries)
@@ -339,12 +338,11 @@ TEST(Directory, EnumerateFileSystemEntries)
     TempDirectory directory5(Directory::CreateDirectory(Path::Combine(directory4.GetPath(), Path::GetRandomFileName()))->ToString());
     auto file4 = directory5.AddTempFile();
 
-    std::vector<std::u16string> ret;
-    auto callback = [&](std::u16string&& str) { ret.push_back(std::move(str)); return false; };
-    Directory::EnumerateFileSystemEntries(directory.GetPath(), u"*", SearchOption::TopDirectoryOnly, callback);
+    auto it = Directory::EnumerateFileSystemEntries(directory.GetPath(), u"*", SearchOption::TopDirectoryOnly);
+    std::vector<std::u16string> ret{begin(it), end(it)};
     EXPECT_EQ(ret.size(), 4);
 
-    ret.clear();
-    Directory::EnumerateFileSystemEntries(directory.GetPath(), u"*", SearchOption::AllDirectories, callback);
-    EXPECT_EQ(ret.size(), 13);
+    it = Directory::EnumerateFileSystemEntries(directory.GetPath(), u"*", SearchOption::AllDirectories);
+    std::vector<std::u16string> ret2{begin(it), end(it)};
+    EXPECT_EQ(ret2.size(), 13);
 }

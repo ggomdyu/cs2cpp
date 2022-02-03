@@ -6,39 +6,17 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace detail
-{
-
-template <typename T, typename = std::void_t<>>
-constexpr bool HasSizeFunc = false;
-template <typename T>
-constexpr bool HasSizeFunc<T, std::void_t<decltype(std::declval<T>().size())>> = true;
-
-template <typename T, typename = std::void_t<>>
-constexpr bool HasDataFunc = false;
-template <typename T>
-constexpr bool HasDataFunc<T, std::void_t<decltype(std::declval<T>().data())>> = true;
-
-template <typename T>
-constexpr bool IsStdContainer = HasSizeFunc<T> && HasDataFunc<T>;
-
-}
-
 template <typename T>
 class Span final
 {
     static_assert(!std::is_const_v<T>, "Span doesn't accept const template parameter, use ReadOnlySpan instead.");
 
 public:
-    using Element = T;
-    using Pointer = T*;
-
-public:
     constexpr Span() noexcept = default;
     constexpr Span(T* ptr, int32_t length) noexcept;
     template <int32_t N>
     constexpr Span(T (&arr)[N]) noexcept;
-    template <typename C, std::enable_if_t<detail::IsStdContainer<C>, int> = 0>
+    template <typename C, decltype(std::declval<C>().size(), std::declval<C>().data())* = nullptr>
     constexpr Span(C& container) noexcept;
     constexpr Span(std::initializer_list<T> container) noexcept;
 
@@ -89,7 +67,7 @@ constexpr Span<T>::Span(T (&arr)[N]) noexcept :
 }
 
 template <typename T>
-template <typename C, std::enable_if_t<detail::IsStdContainer<C>, int>>
+template <typename C, decltype(std::declval<C>().size(), std::declval<C>().data())*>
 constexpr Span<T>::Span(C& container) noexcept :
     Span(container.data(), static_cast<int32_t>(container.size()))
 {
@@ -168,7 +146,7 @@ constexpr bool Span<T>::operator!=(Span<T> rhs) const noexcept
 template <typename T>
 void Span<T>::Clear()
 {
-    std::fill(storage_, storage_ + length_, T());
+    std::fill(storage_, storage_ + length_, T{});
 }
 
 template <typename T>
@@ -192,10 +170,7 @@ bool Span<T>::CopyTo(Span<T> destination) const
 template <typename T>
 std::vector<T> Span<T>::ToArray() const
 {
-    std::vector<T> ret(static_cast<size_t>(length_));
-    std::copy(storage_, storage_ + length_, ret.data());
-
-    return ret;
+    return std::vector<T>(storage_, storage_ + length_);
 }
 
 template <typename T>

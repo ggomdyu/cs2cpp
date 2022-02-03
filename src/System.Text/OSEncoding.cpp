@@ -13,7 +13,7 @@ OSEncoding::OSEncoding(int32_t codePage) :
 
 std::shared_ptr<Encoding> OSEncoding::Clone() const noexcept
 {
-    auto ret = std::make_shared<OSEncoding>(codePage_);
+    std::shared_ptr<OSEncoding> ret = std::make_shared<OSEncoding>(codePage_);
 
     // Cloned Encoding is writable.
     ret->isReadOnly_ = false;
@@ -50,41 +50,41 @@ bool OSEncoding::SetDecoderFallback(std::shared_ptr<DecoderFallback> fallback)
 
 std::optional<std::vector<std::byte>> OSEncoding::GetBytes(ReadOnlySpan<char16_t> chars) const
 {
-    auto byteCount = GetByteCount(chars);
+    std::optional<int> byteCount = GetByteCount(chars);
     if (!byteCount)
     {
         return std::nullopt;
     }
 
     std::vector<std::byte> bytes(*byteCount);
-    if (!GetBytes(chars, bytes))
+    if (!GetBytes(ReadOnlySpan(chars), Span(bytes)))
     {
         return std::nullopt;
     }
 
-    return std::optional<std::vector<std::byte>>(std::move(bytes));
+    return {std::move(bytes)};
 }
 
 std::optional<std::vector<char16_t>> OSEncoding::GetChars(ReadOnlySpan<std::byte> bytes) const
 {
-    auto charCount = GetCharCount(bytes);
+    std::optional<int> charCount = GetCharCount(bytes);
     if (!charCount)
     {
         return std::nullopt;
     }
 
     std::vector<char16_t> chars(*charCount);
-    if (!GetChars(bytes, chars))
+    if (!GetChars(ReadOnlySpan(bytes), Span(chars)))
     {
         return std::nullopt;
     }
 
-    return std::optional<std::vector<char16_t>>(std::move(chars));
+    return {std::move(chars)};
 }
 
 std::optional<std::u16string> OSEncoding::GetString(ReadOnlySpan<std::byte> bytes) const
 {
-    auto charCount = GetCharCount(bytes);
+    std::optional<int> charCount = GetCharCount(bytes);
     if (!charCount)
     {
         return std::nullopt;
@@ -92,7 +92,7 @@ std::optional<std::u16string> OSEncoding::GetString(ReadOnlySpan<std::byte> byte
 
     std::u16string str;
     str.resize(*charCount);
-    if (!GetChars(bytes, str))
+    if (!GetChars(ReadOnlySpan(bytes), Span(str)))
     {
         return std::nullopt;
     }
@@ -103,7 +103,7 @@ std::optional<std::u16string> OSEncoding::GetString(ReadOnlySpan<std::byte> byte
         str.pop_back();
     }
 
-    return std::optional<std::u16string>(std::move(str));
+    return {std::move(str)};
 }
 
 int32_t OSEncoding::GetMaxByteCount(int32_t charCount) const noexcept

@@ -52,7 +52,7 @@ int32_t ConsoleStream::ReadByte()
 
 bool ConsoleStream::WriteByte(std::byte value)
 {
-    return Write(std::array{value});
+    return Write({&value, 1});
 }
 
 int64_t ConsoleStream::Seek(int64_t offset, SeekOrigin origin)

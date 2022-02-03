@@ -1,8 +1,10 @@
+#include <algorithm>
 #include <array>
 
 #include "System/Environment.h"
 #include "System/Random.h"
 #include "System.IO/Directory.h"
+#include "System.IO/Path.h"
 
 CS2CPP_NAMESPACE_BEGIN
 
@@ -53,8 +55,8 @@ std::u16string Path::GetRandomFileName()
 {
     Random r;
 
-    std::array<char16_t, 12> buffer{};
-    for (auto& c : buffer)
+    std::array<char16_t, 12> buffer = {};
+    for (char16_t& c : buffer)
     {
         c = static_cast<char16_t>(r.Next(0, 2) == 0
             ? r.Next(u'a', u'z' + 1)
@@ -81,7 +83,7 @@ void Path::InternalCombine(std::u16string_view path, std::u16string& dest)
 
     if (!dest.empty())
     {
-        bool hasSeparator = IsDirectorySeparator(dest.back()) || IsDirectorySeparator(dest.back()) || IsVolumeSeparator(dest.back());
+        bool hasSeparator = IsDirectorySeparator(dest.back()) || IsVolumeSeparator(dest.back());
         if (!hasSeparator)
         {
             dest += DirectorySeparatorChar;

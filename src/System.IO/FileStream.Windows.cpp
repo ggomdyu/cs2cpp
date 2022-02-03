@@ -117,12 +117,9 @@ void FileStream::InternalClose()
 bool FileStream::InternalSetLength(int64_t value)
 {
     auto prevFilePos = filePos_;
-    if (filePos_ != value)
+    if (filePos_ != value && InternalSeek(value, SeekOrigin::Begin) == 0)
     {
-        if (InternalSeek(value, SeekOrigin::Begin) == 0)
-        {
-            return false;
-        }
+        return false;
     }
 
     if (SetEndOfFile(fileHandle_) == FALSE)

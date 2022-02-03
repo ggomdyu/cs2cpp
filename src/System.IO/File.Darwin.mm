@@ -7,10 +7,7 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace
-{
-
-NSDate* DateTimeToNative(DateTime dateTime)
+static NSDate* DateTimeToNative(DateTime dateTime)
 {
     auto dateComponents = [[NSDateComponents alloc] init];
     [dateComponents setYear:dateTime.Year()];
@@ -28,8 +25,6 @@ NSDate* DateTimeToNative(DateTime dateTime)
         : date;
 }
 
-}
-    
 bool File::SetCreationTime(std::u16string_view path, DateTime creationTimeUtc)
 {
     auto date = DateTimeToNative(creationTimeUtc);
@@ -85,15 +80,5 @@ bool File::Copy(std::u16string_view srcPath, std::u16string_view destPath, bool 
                                                    toPath:nsDestPath
                                                     error:nil];
 }
-
-//SafeFilePointer File::InternalFileOpen(std::u16string_view path, std::u16string_view mode)
-//{
-//    return SafeFilePointer(fopen(
-//        [NSString stringWithCharacters:reinterpret_cast<const unichar*>(path.data())
-//                                length:path.length()].UTF8String,
-//        [NSString stringWithCharacters:reinterpret_cast<const unichar*>(mode.data())
-//                                length:mode.length()].UTF8String
-//    ));
-//}
 
 CS2CPP_NAMESPACE_END

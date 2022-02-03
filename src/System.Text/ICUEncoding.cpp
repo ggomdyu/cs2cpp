@@ -1,6 +1,5 @@
 #include <mutex>
 #include <unicode/ucnv.h>
-#include <unicode/ucnv_cb.h>
 #include <unicode/unistr.h>
 #include <unordered_map>
 
@@ -11,18 +10,15 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace
+static UConverter* CreateInternalConverter(int32_t codePage)
 {
-
-UConverter* CreateInternalConverter(int32_t codePage)
-{
-    auto status = U_ZERO_ERROR;
+    UErrorCode status = U_ZERO_ERROR;
     return ucnv_openCCSID(EncodingTable::GetCCSIDFromCodePage(codePage).value_or(-1), UCNV_IBM, &status);
 }
 
-std::shared_ptr<ICUEncoding> CreateDefaultEncoding(int32_t codePage)
+static std::shared_ptr<ICUEncoding> CreateDefaultEncoding(int32_t codePage)
 {
-    auto converter = CreateInternalConverter(codePage);
+    UConverter* converter = CreateInternalConverter(codePage);
     if (!converter)
     {
         return nullptr;
@@ -31,17 +27,16 @@ std::shared_ptr<ICUEncoding> CreateDefaultEncoding(int32_t codePage)
     return std::make_shared<ICUEncoding>(converter, codePage);
 }
 
-std::optional<int32_t> InternalConvert(const ICUEncoding& srcEncoding, const ICUEncoding& destEncoding, ReadOnlySpan<std::byte> srcBytes, Span<std::byte> destBytes)
+static std::optional<int32_t> InternalConvert(const ICUEncoding& srcEncoding, const ICUEncoding& destEncoding, ReadOnlySpan<std::byte> srcBytes, Span<std::byte> destBytes)
 {
-    auto status = U_ZERO_ERROR;
-    auto converter = icu::UnicodeString(reinterpret_cast<const char*>(begin(srcBytes)), srcBytes.Length(),
-        srcEncoding.GetInternalConverter(), status);
+    UErrorCode status = U_ZERO_ERROR;
+    icu::UnicodeString converter(reinterpret_cast<const char*>(begin(srcBytes)), srcBytes.Length(), srcEncoding.GetInternalConverter(), status);
     if (U_FAILURE(status))
     {
         return std::nullopt;
     }
 
-    auto convertedByteCount = converter.extract(reinterpret_cast<char*>(begin(destBytes)), destBytes.Length(),
+    int32_t convertedByteCount = converter.extract(reinterpret_cast<char*>(begin(destBytes)), destBytes.Length(),
         destEncoding.GetInternalConverter(), status);
 
     // U_BUFFER_OVERFLOW_ERROR occurs when we pass an empty destBytes, but it's not an error.
@@ -54,7 +49,7 @@ std::optional<int32_t> InternalConvert(const ICUEncoding& srcEncoding, const ICU
 }
 
 template <typename T>
-std::optional<T> InternalConvert(const ICUEncoding& srcEncoding, const ICUEncoding& destEncoding, ReadOnlySpan<std::byte> bytes)
+static std::optional<T> InternalConvert(const ICUEncoding& srcEncoding, const ICUEncoding& destEncoding, ReadOnlySpan<std::byte> bytes)
 {
     T fakeSizeBuffer;
 
@@ -64,7 +59,7 @@ std::optional<T> InternalConvert(const ICUEncoding& srcEncoding, const ICUEncodi
         destEncoding.GetMaxByteCount(srcEncoding.GetMaxCharCount(bytes.Length()) + 1);
     fakeSizeBuffer.resize(expectedByteCount / sizeof(fakeSizeBuffer[0]));
 
-    auto convertedByteCount = InternalConvert(srcEncoding, destEncoding, bytes,
+    std::optional<int> convertedByteCount = InternalConvert(srcEncoding, destEncoding, bytes,
         {reinterpret_cast<std::byte*>(fakeSizeBuffer.data()), static_cast<int32_t>(fakeSizeBuffer.size() * sizeof(fakeSizeBuffer[0]))});
     if (!convertedByteCount)
     {
@@ -74,8 +69,6 @@ std::optional<T> InternalConvert(const ICUEncoding& srcEncoding, const ICUEncodi
     fakeSizeBuffer.resize(*convertedByteCount / sizeof(fakeSizeBuffer[0]));
 
     return std::optional<T>(std::move(fakeSizeBuffer));
-}
-
 }
 
 std::shared_ptr<Encoding> Encoding::GetEncoding(int32_t codePage)
@@ -90,7 +83,7 @@ std::shared_ptr<Encoding> Encoding::GetEncoding(int32_t codePage)
         return it->second;
     }
 
-    auto encoding = CreateDefaultEncoding(codePage);
+    std::shared_ptr<ICUEncoding> encoding = CreateDefaultEncoding(codePage);
     if (!encoding)
     {
         return nullptr;
@@ -116,7 +109,7 @@ ICUEncoding::~ICUEncoding() = default;
 
 std::shared_ptr<Encoding> ICUEncoding::Clone() const noexcept
 {
-    auto ret = std::make_shared<ICUEncoding>(CreateInternalConverter(codePage_), codePage_, GetEncoderFallback(), GetDecoderFallback());
+    std::shared_ptr<ICUEncoding> ret = std::make_shared<ICUEncoding>(CreateInternalConverter(codePage_), codePage_, GetEncoderFallback(), GetDecoderFallback());
 
     // Cloned Encoding is writable.
     ret->isReadOnly_ = false;
@@ -179,7 +172,7 @@ std::optional<int32_t> ICUEncoding::GetCharCount(ReadOnlySpan<std::byte> bytes) 
 
 std::optional<int32_t> ICUEncoding::GetChars(ReadOnlySpan<std::byte> bytes, Span<char16_t> chars) const
 {
-    auto convertedByteCount = InternalConvert(*this, reinterpret_cast<const ICUEncoding&>(Unicode()), bytes,
+    std::optional<int> convertedByteCount = InternalConvert(*this, reinterpret_cast<const ICUEncoding&>(Unicode()), bytes,
         {reinterpret_cast<std::byte*>(begin(chars)), static_cast<int32_t>(chars.Length() * sizeof(chars[0]))});
     if (!convertedByteCount)
     {
@@ -223,7 +216,7 @@ int32_t ICUEncoding::GetMaxCharCount(int32_t byteCount) const noexcept
 
 void ICUEncoding::RefreshEncoderFallback()
 {
-    auto status = U_ZERO_ERROR;
+    UErrorCode status = U_ZERO_ERROR;
     ucnv_setFromUCallBack(converter_.get(), [](const void* context, UConverterFromUnicodeArgs* fromUArgs, const UChar* codeUnits, int32_t length, UChar32 codePoint, UConverterCallbackReason reason, UErrorCode* err)
     {
         if (reason > UCNV_IRREGULAR)
@@ -241,7 +234,7 @@ void ICUEncoding::RefreshEncoderFallback()
 
 void ICUEncoding::RefreshDecoderFallback()
 {
-    auto status = U_ZERO_ERROR;
+    UErrorCode status = U_ZERO_ERROR;
     ucnv_setToUCallBack(converter_.get(), [](const void* context, UConverterToUnicodeArgs* toArgs, const char* codeUnits, int32_t length, UConverterCallbackReason reason, UErrorCode* err)
     {
         if (reason > UCNV_IRREGULAR)

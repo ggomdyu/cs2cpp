@@ -25,29 +25,29 @@ bool Encoding::operator!=(const Encoding& rhs) const noexcept
 
 std::optional<int32_t> Encoding::Convert(const Encoding& srcEncoding, const Encoding& destEncoding, ReadOnlySpan<std::byte> srcBytes, Span<std::byte> destBytes)
 {
-    auto characters = srcEncoding.GetChars(srcBytes);
+    std::optional<std::vector<char16_t>> characters = srcEncoding.GetChars(srcBytes);
     if (!characters)
     {
         return std::nullopt;
     }
 
-    return destEncoding.GetBytes(*characters, destBytes);
+    return destEncoding.GetBytes(ReadOnlySpan(*characters), Span(destBytes));
 }
 
 std::optional<std::vector<std::byte>> Encoding::Convert(const Encoding& srcEncoding, const Encoding& destEncoding, ReadOnlySpan<std::byte> bytes)
 {
-    auto characters = srcEncoding.GetChars(bytes);
+    std::optional<std::vector<char16_t>> characters = srcEncoding.GetChars(bytes);
     if (!characters)
     {
         return std::nullopt;
     }
 
-    return destEncoding.GetBytes(*characters);
+    return destEncoding.GetBytes(ReadOnlySpan(*characters));
 }
 
 std::shared_ptr<Encoding> Encoding::GetEncoding(std::u16string_view encodingName)
 {
-    auto codePage = EncodingTable::GetCodePageFromName(encodingName);
+    std::optional<int> codePage = EncodingTable::GetCodePageFromName(encodingName);
     if (!codePage)
     {
         return nullptr;
@@ -58,7 +58,7 @@ std::shared_ptr<Encoding> Encoding::GetEncoding(std::u16string_view encodingName
 
 std::shared_ptr<Encoding> Encoding::GetEncoding(int32_t codePage, std::shared_ptr<EncoderFallback> encoderFallback, std::shared_ptr<DecoderFallback> decoderFallback)
 {
-    auto encoding = GetEncoding(codePage);
+    std::shared_ptr<Encoding> encoding = GetEncoding(codePage);
     if (!encoding)
     {
         return nullptr;
@@ -73,7 +73,7 @@ std::shared_ptr<Encoding> Encoding::GetEncoding(int32_t codePage, std::shared_pt
 
 std::shared_ptr<Encoding> Encoding::GetEncoding(std::u16string_view encodingName, std::shared_ptr<EncoderFallback> encoderFallback, std::shared_ptr<DecoderFallback> decoderFallback)
 {
-    auto codePage = EncodingTable::GetCodePageFromName(encodingName);
+    std::optional<int> codePage = EncodingTable::GetCodePageFromName(encodingName);
     if (!codePage)
     {
         return nullptr;
@@ -89,43 +89,43 @@ std::vector<EncodingInfo> Encoding::GetEncodings()
 
 const Encoding& Encoding::ASCII() noexcept
 {
-    static auto encoding = GetEncoding(CodePageASCII);
+    static std::shared_ptr<Encoding> encoding = GetEncoding(CodePageASCII);
     return *encoding;
 }
 
 const Encoding& Encoding::Latin1() noexcept
 {
-    static auto encoding = GetEncoding(CodePageLatin1);
+    static std::shared_ptr<Encoding> encoding = GetEncoding(CodePageLatin1);
     return *encoding;
 }
 
 const Encoding& Encoding::UTF8() noexcept
 {
-    static auto encoding = GetEncoding(CodePageUTF8);
+    static std::shared_ptr<Encoding> encoding = GetEncoding(CodePageUTF8);
     return *encoding;
 }
 
 const Encoding& Encoding::Unicode() noexcept
 {
-    static auto encoding = GetEncoding(CodePageUTF16);
+    static std::shared_ptr<Encoding> encoding = GetEncoding(CodePageUTF16);
     return *encoding;
 }
 
 const Encoding& Encoding::BigEndianUnicode() noexcept
 {
-    static auto encoding = GetEncoding(CodePageUTF16BE);
+    static std::shared_ptr<Encoding> encoding = GetEncoding(CodePageUTF16BE);
     return *encoding;
 }
 
 const Encoding& Encoding::UTF32() noexcept
 {
-    static auto encoding = GetEncoding(CodePageUTF32);
+    static std::shared_ptr<Encoding> encoding = GetEncoding(CodePageUTF32);
     return *encoding;
 }
 
 const Encoding& Encoding::BigEndianUnicode32() noexcept
 {
-    static auto encoding = GetEncoding(CodePageUTF32BE);
+    static std::shared_ptr<Encoding> encoding = GetEncoding(CodePageUTF32BE);
     return *encoding;
 }
 

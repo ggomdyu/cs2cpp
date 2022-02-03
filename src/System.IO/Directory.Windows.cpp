@@ -1,69 +1,80 @@
-#include "System.IO/Directory.h"
+#include <sys/stat.h>
 
-#if !defined(S_ISDIR) && defined(S_IFMT) && defined(S_IFDIR)
-#   define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#include "System.IO/Directory.h"
+#include "System.IO/Path.h"
+#include "System/Windows/Windows.h"
+
+#ifndef S_ISDIR
+#    define S_ISDIR(m) (((m)&S_IFMT) == S_IFDIR)
 #endif
 
 CS2CPP_NAMESPACE_BEGIN
 
-extern std::optional<struct _stat> CreateStat(std::u16string_view path);
+extern std::optional<struct _stat> CreateStat(const std::u16string& path);
 
-namespace
+static bool InternalRecursiveDelete(std::wstring& buffer)
 {
-
-bool InternalRecursiveDelete(std::wstring& strBuffer)
-{
-    if (!Path::IsDirectorySeparator(strBuffer.back()))
+    if (!Path::IsDirectorySeparator(buffer.back()))
     {
-        strBuffer.push_back(Path::DirectorySeparatorChar);
+        buffer.push_back(Path::DirectorySeparatorChar);
     }
+    buffer.push_back(u'*');
 
-    auto wildcard = u'*';
-    strBuffer.push_back(wildcard);
-
+    // Create a file search handle.
+    auto deleter = [](void* handle)
+    {
+        if (handle != INVALID_HANDLE_VALUE)
+        {
+            FindClose(handle);
+        }
+    };
     WIN32_FIND_DATAW findData;
-    SafeFindHandle handle(FindFirstFileW(strBuffer.data(), &findData));
-    if (!handle)
+    std::unique_ptr<void, void (*)(void*)> handle(FindFirstFileW(buffer.data(), &findData), deleter);
+    if (handle.get() == INVALID_HANDLE_VALUE)
     {
         return false;
     }
 
-    strBuffer.pop_back();
+    // Remove the wildcard.
+    buffer.pop_back();
 
     do
     {
         // Ignore the . and ..
-        if (findData.cFileName[0] == L'.' && (findData.cFileName[1] == L'\0'
-            || (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
+        if (findData.cFileName[0] == L'.' &&
+            (findData.cFileName[1] == L'\0' || (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
         {
             continue;
         }
 
-        auto filename = std::wstring_view(findData.cFileName);
-        auto rollbackLength = strBuffer.size();
-        strBuffer += filename;
+        size_t rollbackNum = buffer.size();
+        buffer += findData.cFileName;
 
         if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
         {
-            InternalRecursiveDelete(strBuffer);
+            InternalRecursiveDelete(buffer);
         }
         else
         {
-            DeleteFileW(strBuffer.data());
+            DeleteFileW(buffer.data());
         }
 
-        strBuffer.erase(rollbackLength, strBuffer.size() - rollbackLength);
-    } while (FindNextFileW(handle, &findData) == TRUE);
+        buffer.erase(rollbackNum, buffer.size() - rollbackNum);
+    } while (FindNextFileW(handle.get(), &findData) == TRUE);
 
-    return RemoveDirectoryW(strBuffer.data()) == TRUE;
+    return RemoveDirectoryW(buffer.data()) == TRUE;
 }
 
+static bool InternalRecursiveDelete(const std::u16string& path)
+{
+    std::wstring buffer(reinterpret_cast<const wchar_t*>(path.c_str()), path.length());
+    return InternalRecursiveDelete(buffer);
 }
 
 bool Directory::Delete(std::u16string_view path, bool recursive)
 {
-    auto fullPath = Path::GetFullPath(path);
-    auto s = CreateStat(fullPath);
+    std::u16string fullPath = Path::GetFullPath(path);
+    std::optional<struct _stat> s = CreateStat(fullPath);
     if (!s.has_value() || !S_ISDIR(s->st_mode))
     {
         return false;
@@ -71,8 +82,7 @@ bool Directory::Delete(std::u16string_view path, bool recursive)
 
     if (recursive)
     {
-        std::wstring wideCharPath(reinterpret_cast<LPCWSTR>(fullPath.data()), fullPath.length());
-        return InternalRecursiveDelete(wideCharPath);
+        return InternalRecursiveDelete(fullPath);
     }
 
     return RemoveDirectoryW(reinterpret_cast<LPCWSTR>(fullPath.data())) == TRUE;
@@ -80,15 +90,15 @@ bool Directory::Delete(std::u16string_view path, bool recursive)
 
 bool Directory::Exists(std::u16string_view path)
 {
-    auto fullPath = Path::GetFullPath(path);
-    auto s = CreateStat(fullPath);
+    std::u16string fullPath = Path::GetFullPath(path);
+    std::optional<struct _stat> s = CreateStat(fullPath);
     return s.has_value() && S_ISDIR(s->st_mode);
 }
 
 bool Directory::Move(std::u16string_view srcPath, std::u16string_view destPath)
 {
-    auto srcFullPath = Path::GetFullPath(srcPath);
-    auto s = CreateStat(srcFullPath);
+    std::u16string srcFullPath = Path::GetFullPath(srcPath);
+    std::optional<struct _stat> s = CreateStat(srcFullPath);
     if (!s.has_value() || !S_ISDIR(s->st_mode))
     {
         return false;

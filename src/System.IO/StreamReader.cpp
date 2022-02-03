@@ -93,14 +93,14 @@ std::optional<StreamReader> StreamReader::Create(std::u16string_view path, const
         return std::nullopt;
     }
 
-    auto fileStream = FileStream::Create(path, FileMode::Open, FileAccess::Read, FileShare::Read, FileOptions::SequentialScan,
+    auto stream = FileStream::Create(path, FileMode::Open, FileAccess::Read, FileShare::Read, FileOptions::SequentialScan,
         DefaultFileStreamBufferSize);
-    if (!fileStream)
+    if (!stream)
     {
         return std::nullopt;
     }
 
-    return StreamReader(std::move(fileStream), encoding, detectEncodingFromByteOrderMarks, bufferSize);
+    return StreamReader(std::move(stream), encoding, detectEncodingFromByteOrderMarks, bufferSize);
 }
 
 std::shared_ptr<Encoding> StreamReader::CurrentEncoding() const noexcept
@@ -120,12 +120,9 @@ bool StreamReader::IsEndOfStream() const noexcept
 
 int32_t StreamReader::Peek()
 {
-    if (charPos_ == charLen_)
+    if (charPos_ == charLen_ && ReadBuffer() == 0)
     {
-        if (ReadBuffer() == 0)
-        {
-            return -1;
-        }
+        return -1;
     }
 
     return GetCharBuffer()[charPos_];
@@ -162,11 +159,9 @@ std::shared_ptr<Encoding> StreamReader::CloneEncoding(const Encoding& encoding)
 
 int32_t StreamReader::ReadBuffer()
 {
-    charPos_ = 0;
-    charLen_ = 0;
-    bytePos_ = 0;
+    charPos_ = charLen_ = bytePos_ = 0;
 
-    decltype(auto) byteBuffer = GetByteBuffer();
+    std::vector<std::byte>& byteBuffer = GetByteBuffer();
 
     // If character bytes are overlapped at the boundary of byteBuffer, it will occur fallback while decoding.
     // Therefore, when the stream is read again, we need to fill byteBuffer with fallbackBuffer_.
@@ -193,9 +188,7 @@ int32_t StreamReader::ReadBuffer()
         detectEncoding_ = false;
     }
 
-    decltype(auto) charBuffer = GetCharBuffer();
-
-    auto convertedCharCount = encoding_->GetChars({&byteBuffer[bytePos_], readByteCount - bytePos_}, charBuffer);
+    std::optional<int> convertedCharCount = encoding_->GetChars(ReadOnlySpan(&byteBuffer[bytePos_], readByteCount - bytePos_), Span(GetCharBuffer()));
     if (!convertedCharCount && !bytesUnknown_.empty())
     {
         // The stream read too short data, which causes fallback.
@@ -203,9 +196,7 @@ int32_t StreamReader::ReadBuffer()
         return ReadBuffer();
     }
 
-    charLen_ = *convertedCharCount;
-
-    return charLen_;
+    return charLen_ = *convertedCharCount;
 }
 
 bool StreamReader::DetectPreamble(const Encoding& encoding, int32_t readByteCount)
@@ -215,7 +206,7 @@ bool StreamReader::DetectPreamble(const Encoding& encoding, int32_t readByteCoun
         return false;
     }
 
-    decltype(auto) byteBuffer = GetByteBuffer();
+    ReadOnlySpan<std::byte> byteBuffer = GetByteBuffer();
     for (int32_t i = 0; i < encoding.Preamble().Length(); ++i)
     {
         if (byteBuffer[i] != encoding.Preamble()[i])
@@ -229,11 +220,11 @@ bool StreamReader::DetectPreamble(const Encoding& encoding, int32_t readByteCoun
 
 void StreamReader::DetectEncoding(int32_t readByteCount)
 {
-    decltype(auto) byteBuffer = GetByteBuffer();
+    std::vector<std::byte>& byteBuffer = GetByteBuffer();
 
     // If the default reader's encoding is different from detected encoding, then
     // refresh charBuffer_ and encoding_, etc.
-    decltype(auto) newEncoding = GetCorrespondingEncoding(byteBuffer);
+    const Encoding& newEncoding = GetCorrespondingEncoding(byteBuffer);
     if (newEncoding.CodePage() != encoding_->CodePage())
     {
         auto newMaxCharsPerBuffer = newEncoding.GetMaxCharCount(static_cast<int32_t>(byteBuffer.size()));

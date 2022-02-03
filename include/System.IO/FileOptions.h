@@ -1,10 +1,12 @@
 #pragma once
 
+#include <limits>
+
 CS2CPP_NAMESPACE_BEGIN
 
 enum class FileOptions
 {
-    WriteThrough = std::numeric_limits<int>::min(),
+    WriteThrough = std::numeric_limits<int32_t>::min(),
     None = 0,
     Encrypted = 16384,
     DeleteOnClose = 67108864,

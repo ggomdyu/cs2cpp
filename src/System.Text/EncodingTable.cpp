@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <unicode/locid.h>
 #include <unordered_map>
 #include <vector>
 
@@ -47,28 +46,26 @@ std::optional<int32_t> EncodingTable::GetCCSIDFromCodePage(int32_t codePage) noe
 
 std::optional<int32_t> EncodingTable::GetCodePageFromName(std::u16string_view name)
 {
-    static std::unordered_map<int32_t, int32_t> nameToCodePage;
+    static std::unordered_map<std::u16string, int32_t> nameToCodePage;
     static std::mutex mutex;
 
-    auto lowercaseName = icu::UnicodeString(name.data());
-    lowercaseName.toLower(icu::Locale::getUS());
+    std::u16string lowercaseName(name);
+    std::transform(lowercaseName.begin(), lowercaseName.end(), lowercaseName.end(), [](char16_t value) { return std::tolower(value); });
 
-    auto nameHash = lowercaseName.hashCode();
-
-    [[maybe_unused]] auto lock = std::lock_guard(mutex);
-    auto it = nameToCodePage.find(nameHash);
+    [[maybe_unused]] std::lock_guard lock(mutex);
+    auto it = nameToCodePage.find(lowercaseName);
     if (it != nameToCodePage.end())
     {
         return it->second;
     }
 
-    auto codePage = InternalGetCodePageFromName(std::u16string_view(lowercaseName.getBuffer(), lowercaseName.length()));
+    std::optional<int> codePage = InternalGetCodePageFromName(lowercaseName);
     if (!codePage)
     {
         return std::nullopt;
     }
 
-    return nameToCodePage.emplace_hint(it, nameHash, *codePage)->second;
+    return nameToCodePage.emplace_hint(it, lowercaseName, *codePage)->second;
 }
 
 const CodePageDataItem& EncodingTable::GetCodePageDataItem(int32_t codePage)

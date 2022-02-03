@@ -1,6 +1,7 @@
 #include <array>
-#include <System.Text/OSEncoding.h>
 #include <gtest/gtest.h>
+
+#include "System.Text/OSEncoding.h"
 
 using namespace CS2CPP_NAMESPACE_NAME;
 

@@ -6,25 +6,22 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace
-{
-
-HANDLE GetInputHandle()
+static HANDLE GetInputHandle()
 {
     return GetStdHandle(STD_INPUT_HANDLE);
 }
 
-HANDLE GetOutputHandle()
+static HANDLE GetOutputHandle()
 {
     return GetStdHandle(STD_OUTPUT_HANDLE);
 }
 
-HANDLE GetErrorHandle()
+static HANDLE GetErrorHandle()
 {
     return GetStdHandle(STD_ERROR_HANDLE);
 }
 
-std::shared_ptr<Stream> GetStandardFile(HANDLE handle, FileAccess access, bool useFileAPIs)
+static std::shared_ptr<Stream> GetStandardFile(HANDLE handle, FileAccess access, bool useFileAPIs)
 {
     if (!handle || handle == INVALID_HANDLE_VALUE)
     {
@@ -34,7 +31,7 @@ std::shared_ptr<Stream> GetStandardFile(HANDLE handle, FileAccess access, bool u
     return std::make_shared<ConsoleStream>(handle, access, useFileAPIs);
 }
 
-bool IsHandleRedirected(HANDLE handle)
+static bool IsHandleRedirected(HANDLE handle)
 {
     auto fileType = GetFileType(handle);
     if ((fileType & FILE_TYPE_CHAR) != FILE_TYPE_CHAR)
@@ -46,9 +43,9 @@ bool IsHandleRedirected(HANDLE handle)
     return !!GetConsoleMode(handle, &mode);
 }
 
-std::optional<WORD> DefaultColors;
+static std::optional<WORD> DefaultColors;
 
-std::optional<CONSOLE_SCREEN_BUFFER_INFO> GetConsoleScreenBufferInfo(HANDLE handle)
+static std::optional<CONSOLE_SCREEN_BUFFER_INFO> GetConsoleScreenBufferInfo(HANDLE handle)
 {
     CONSOLE_SCREEN_BUFFER_INFO info;
     if (GetConsoleScreenBufferInfo(handle, &info) == FALSE)
@@ -64,22 +61,20 @@ std::optional<CONSOLE_SCREEN_BUFFER_INFO> GetConsoleScreenBufferInfo(HANDLE hand
     return info;
 }
 
-bool IsKeyDownEvent(const INPUT_RECORD& ir) noexcept
+static bool IsKeyDownEvent(const INPUT_RECORD& ir) noexcept
 {
     return ir.EventType == KEY_EVENT && ir.Event.KeyEvent.bKeyDown == TRUE;
 }
 
-bool IsModKey(const INPUT_RECORD& ir) noexcept
+static bool IsModKey(const INPUT_RECORD& ir) noexcept
 {
     auto keyCode = ir.Event.KeyEvent.wVirtualKeyCode;
     return (keyCode >= VK_SHIFT && keyCode <= VK_MENU) || keyCode == VK_CAPITAL || keyCode == VK_NUMLOCK || keyCode == VK_SCROLL;
 }
 
-bool IsAltKeyDown(const INPUT_RECORD& ir) noexcept
+static bool IsAltKeyDown(const INPUT_RECORD& ir) noexcept
 {
     return ir.Event.KeyEvent.dwControlKeyState & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED);
-}
-
 }
 
 std::shared_ptr<Stream> Console::OpenStandardInput()

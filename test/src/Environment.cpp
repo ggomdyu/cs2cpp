@@ -5,10 +5,11 @@
 #include <gtest/gtest.h>
 #include <thread>
 #if CS2CPP_PLATFORM_WINDOWS
-#    include <System/Windows/Windows.h>
+#    include "System/Windows/Windows.h"
 #else
 #    include <pthread.h>
 #endif
+#include "System.IO/Path.h"
 
 using namespace CS2CPP_NAMESPACE_NAME;
 
@@ -36,10 +37,10 @@ TEST(Environment, GetCommandLineArgs)
 {
     std::u16string commandLine(Environment::CommandLine());
 
-    decltype(auto) args = Environment::GetCommandLineArgs();
-    for (const auto& arg : args)
+    ReadOnlySpan<std::u16string> args = Environment::GetCommandLineArgs();
+    for (std::u16string_view arg : args)
     {
-        auto idx = commandLine.find(arg);
+        size_t idx = commandLine.find(arg);
         auto removeBeginIt = commandLine.begin() + idx;
         auto removeEndIt = removeBeginIt + arg.length();
         commandLine.erase(removeBeginIt, removeEndIt);

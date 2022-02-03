@@ -26,12 +26,12 @@ public:
     void WriteLine(bool value);
     virtual void Flush() = 0;
     virtual void Close() = 0;
-    virtual std::shared_ptr<Encoding> GetEncoding() const noexcept = 0;
+    virtual std::shared_ptr<class Encoding> Encoding() const noexcept = 0;
     virtual void SetNewLine(std::u16string_view newLine);
     virtual std::u16string_view GetNewLine() const noexcept;
 
 protected:
-    virtual void WriteCore(std::u16string_view span, bool appendNewLine) = 0;
+    virtual void InternalWrite(std::u16string_view span, bool appendNewLine) = 0;
 
 protected:
     std::u16string_view newLine_;

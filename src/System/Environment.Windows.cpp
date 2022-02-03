@@ -1,5 +1,4 @@
 #include <System/Windows/Windows.h>
-#include <algorithm>
 #include <array>
 #ifndef SECURITY_WIN32
 #    define SECURITY_WIN32
@@ -14,7 +13,6 @@
 
 #include "System/Environment.h"
 #include "System/ReadOnlySpan.h"
-#include "System/Windows/SafeHandle.h"
 #include "System/Windows/SafeRegistryHandle.h"
 
 #pragma comment(lib, "Secur32.lib")
@@ -23,15 +21,12 @@
 
 CS2CPP_NAMESPACE_BEGIN
 
-namespace
-{
-
 constexpr auto UserRegistryKeyName = L"Environment";
 constexpr auto MachineRegistryKeyName = L"System\\CurrentControlSet\\Control\\Session Manager\\Environment";
 
-std::optional<std::u16string> InternalExpandEnvironmentVariables(const std::wstring& name)
+static std::optional<std::u16string> InternalExpandEnvironmentVariables(const std::wstring& name)
 {
-    auto length = ExpandEnvironmentStringsW(name.data(), nullptr, 0);
+    DWORD length = ExpandEnvironmentStringsW(name.data(), nullptr, 0);
     if (length == 0)
     {
         return std::nullopt;
@@ -47,9 +42,9 @@ std::optional<std::u16string> InternalExpandEnvironmentVariables(const std::wstr
     return ret;
 }
 
-std::optional<std::u16string> InternalGetEnvironmentVariable(const std::wstring& name)
+static std::optional<std::u16string> InternalGetEnvironmentVariable(const std::wstring& name)
 {
-    auto length = GetEnvironmentVariableW(name.data(), nullptr, 0);
+    DWORD length = GetEnvironmentVariableW(name.data(), nullptr, 0);
     if (length == 0)
     {
         return std::nullopt;
@@ -70,7 +65,7 @@ std::optional<std::u16string> InternalGetEnvironmentVariable(const std::wstring&
     return {std::move(ret)};
 }
 
-std::optional<std::u16string> InternalGetRegistryVariable(const SafeRegistryHandle& registryHandle, const std::wstring& name)
+static std::optional<std::u16string> InternalGetRegistryVariable(const SafeRegistryHandle& registryHandle, const std::wstring& name)
 {
     DWORD length;
     if (RegQueryValueExW(registryHandle, name.data(), nullptr, nullptr, nullptr, &length) != ERROR_SUCCESS)
@@ -88,7 +83,7 @@ std::optional<std::u16string> InternalGetRegistryVariable(const SafeRegistryHand
     return ret;
 }
 
-std::optional<std::u16string> InternalGetRegistryVariable(HKEY predefinedKey, LPCWSTR subKey, const std::wstring& name)
+static std::optional<std::u16string> InternalGetRegistryVariable(HKEY predefinedKey, LPCWSTR subKey, const std::wstring& name)
 {
     HKEY keyHandle;
     if (RegOpenKeyExW(predefinedKey, subKey, 0, KEY_READ, &keyHandle) != ERROR_SUCCESS)
@@ -99,7 +94,7 @@ std::optional<std::u16string> InternalGetRegistryVariable(HKEY predefinedKey, LP
     return InternalGetRegistryVariable(SafeRegistryHandle(keyHandle), name);
 }
 
-std::map<std::u16string, std::u16string> InternalGetEnvironmentVariables(HKEY predefinedKey, LPCWSTR subKey)
+static std::map<std::u16string, std::u16string> InternalGetEnvironmentVariables(HKEY predefinedKey, LPCWSTR subKey)
 {
     HKEY keyHandle;
     if (RegOpenKeyExW(predefinedKey, subKey, 0, KEY_READ, &keyHandle) != ERROR_SUCCESS)
@@ -110,7 +105,7 @@ std::map<std::u16string, std::u16string> InternalGetEnvironmentVariables(HKEY pr
     SafeRegistryHandle registryHandle(keyHandle);
 
     std::map<std::u16string, std::u16string> ret;
-    std::array<wchar_t, 2048> name;
+    std::array<wchar_t, 2048> name{};
     for (DWORD i = 0;; ++i)
     {
         DWORD nameLen = name.size();
@@ -129,12 +124,12 @@ std::map<std::u16string, std::u16string> InternalGetEnvironmentVariables(HKEY pr
     return ret;
 }
 
-bool InternalSetEnvironmentVariable(const std::wstring& name, const std::wstring& value)
+static bool InternalSetEnvironmentVariable(const std::wstring& name, const std::wstring& value)
 {
     return SetEnvironmentVariableW(name.data(), value.data()) == TRUE;
 }
 
-bool InternalSetRegistryVariable(HKEY predefinedKey, LPCWSTR subKey, const std::wstring& name, ReadOnlySpan<BYTE> value)
+static bool InternalSetRegistryVariable(HKEY predefinedKey, LPCWSTR subKey, const std::wstring& name, ReadOnlySpan<BYTE> value)
 {
     HKEY rawKeyHandle;
     if (RegOpenKeyExW(predefinedKey, subKey, 0, KEY_READ | KEY_WRITE, &rawKeyHandle) != ERROR_SUCCESS)
@@ -158,7 +153,7 @@ bool InternalSetRegistryVariable(HKEY predefinedKey, LPCWSTR subKey, const std::
     return true;
 }
 
-std::vector<std::u16string> InternalGetLogicalDrives()
+static std::vector<std::u16string> InternalGetLogicalDrives()
 {
     auto driveFlags = GetLogicalDrives();
 
@@ -177,7 +172,7 @@ std::vector<std::u16string> InternalGetLogicalDrives()
     return ret;
 }
 
-std::vector<std::u16string> InternalGetCommandLineArgs()
+static std::vector<std::u16string> InternalGetCommandLineArgs()
 {
     int numArgs;
     auto args = CommandLineToArgvW(GetCommandLineW(), &numArgs);
@@ -187,14 +182,13 @@ std::vector<std::u16string> InternalGetCommandLineArgs()
     }
 
     std::vector<std::u16string> ret;
+    ret.reserve(numArgs);
     for (int i = 0; i < numArgs; ++i)
     {
         ret.emplace_back(reinterpret_cast<const char16_t*>(args[i]));
     }
 
     return ret;
-}
-
 }
 
 int32_t Environment::CurrentManagedThreadId()
@@ -292,11 +286,11 @@ std::map<std::u16string, std::u16string> Environment::GetEnvironmentVariables()
             continue;
         }
 
-        auto key = std::u16string(reinterpret_cast<const char16_t*>(&strings[startKey]), i - startKey);
+        auto key = std::u16string_view(reinterpret_cast<const char16_t*>(&strings[startKey]), i - startKey);
         auto startValue = ++i;
         while (strings[i] != L'\0') ++i;
 
-        ret[std::move(key)] = std::u16string(reinterpret_cast<const char16_t*>(&strings[startValue]), i - startValue);
+        ret.emplace(key, std::u16string_view(reinterpret_cast<const char16_t*>(&strings[startValue]), i - startValue));
     }
 
     return ret;
@@ -360,7 +354,7 @@ std::optional<OperatingSystem> Environment::OSVersion()
     }
 
     using LPFN_RTLGETVER = NTSTATUS(WINAPI*)(LPOSVERSIONINFOEXW);
-    LPFN_RTLGETVER rtlGetVersion = reinterpret_cast<LPFN_RTLGETVER>(GetProcAddress(ntdllHandle, "RtlGetVersion"));
+    auto rtlGetVersion = reinterpret_cast<LPFN_RTLGETVER>(GetProcAddress(ntdllHandle, "RtlGetVersion"));
     if (!rtlGetVersion)
     {
         return std::nullopt;
@@ -441,7 +435,7 @@ bool Environment::SetEnvironmentVariable(std::u16string_view name, std::u16strin
 
 CS2CPP_NOINLINE std::u16string Environment::StackTrace()
 {
-    auto processHandle = GetCurrentProcess();
+    HANDLE processHandle = GetCurrentProcess();
     if (SymInitialize(processHandle, nullptr, TRUE) == FALSE)
     {
         return {};
@@ -450,7 +444,6 @@ CS2CPP_NOINLINE std::u16string Environment::StackTrace()
     SymSetOptions(SYMOPT_LOAD_LINES);
 
     constexpr DWORD MaxStackTraceLineNum = 2048;
-
     DWORD frameHash;
     auto frames = std::array<void*, MaxStackTraceLineNum>{};
     auto frameCount = RtlCaptureStackBackTrace(0, MaxStackTraceLineNum, frames.data(), &frameHash);
@@ -527,7 +520,7 @@ std::u16string Environment::UserDomainName()
         return {};
     }
 
-    auto str = wcschr(name.data(), L'\\');
+    const wchar_t* str = wcschr(name.data(), L'\\');
     if (!str)
     {
         return {};
@@ -562,7 +555,7 @@ bool Environment::UserInteractive()
 
 std::u16string Environment::UserName()
 {
-    std::array<wchar_t, 2048> name;
+    std::array<wchar_t, 2048> name{};
     DWORD nameLen = name.size();
     if (GetUserNameW(name.data(), &nameLen) == FALSE)
     {
@@ -574,10 +567,17 @@ std::u16string Environment::UserName()
 
 int64_t Environment::WorkingSet()
 {
-    auto processHandle = SafeHandle(OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, GetCurrentProcessId()));
+    auto deleter = [](void* handle)
+    {
+        if (handle != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(handle);
+        }
+    };
+    std::unique_ptr<void, void (*)(void*)> processHandle(OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, GetCurrentProcessId()), deleter);
 
     PROCESS_MEMORY_COUNTERS_EX pmc;
-    if (GetProcessMemoryInfo(processHandle, reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc)) == FALSE)
+    if (GetProcessMemoryInfo(processHandle.get(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc)) == FALSE)
     {
         return 0;
     }

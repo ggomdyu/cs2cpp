@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 
-set(GLOB_AGRUMENTS *.cpp)
-file(GLOB_RECURSE SRC_PATH_LIST ${GLOB_AGRUMENTS})
+set(GLOB_ARGUMENTS *.cpp)
+file(GLOB_RECURSE SRC_PATH_LIST ${GLOB_ARGUMENTS})
 add_executable(test ${SRC_PATH_LIST})
 
 find_package(GTest CONFIG REQUIRED)

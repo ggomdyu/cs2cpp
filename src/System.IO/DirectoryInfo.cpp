@@ -1,5 +1,6 @@
 #include "System.IO/DirectoryInfo.h"
 #include "System.IO/Directory.h"
+#include "System.IO/Path.h"
 
 CS2CPP_NAMESPACE_BEGIN
 

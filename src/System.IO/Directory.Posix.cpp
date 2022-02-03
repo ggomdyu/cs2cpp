@@ -1,38 +1,74 @@
 #include <array>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include "System.IO/Directory.h"
 #include "System.IO/DirectoryInfo.h"
 #include "System.IO/Path.h"
+#include "System.Text/Encoding.h"
 
 CS2CPP_NAMESPACE_BEGIN
 
-extern std::optional<struct stat> CreateStat(std::u16string_view path);
-
-namespace
+static std::optional<struct stat> CreateStat(std::u16string_view path)
 {
+    std::optional<std::vector<std::byte>> utf8Path = Encoding::UTF8().GetBytes(path);
+    if (!utf8Path)
+    {
+        return std::nullopt;
+    }
 
-bool InternalRecursiveDelete(std::string_view path)
+    struct stat s{};
+    if (stat(reinterpret_cast<const char*>(utf8Path->data()), &s) != 0)
+    {
+        return std::nullopt;
+    }
+
+    return s;
+}
+
+static bool IsDotDirectory(std::string_view path) noexcept
 {
-    DIR* dir = opendir(reinterpret_cast<const char*>(path.data()));
+    return (path.length() == 1 && path[0] == '.') || (path.length() == 2 && path == "..");
+}
+
+static std::string GetFullPath(std::string_view basePath, std::string_view fileName)
+{
+    std::string fullPath(basePath);
+    bool hasSeparator = Path::IsDirectorySeparator(basePath.back()) || Path::IsVolumeSeparator(basePath.back());
+    if (!hasSeparator)
+    {
+        fullPath += Path::DirectorySeparatorChar;
+    }
+
+    fullPath += fileName;
+
+    return fullPath;
+}
+
+static bool InternalRecursiveDelete(std::string_view path)
+{
+    std::unique_ptr<DIR, decltype(&closedir)> dir(opendir(reinterpret_cast<const char*>(path.data())), &closedir);
     if (!dir)
     {
         return false;
     }
 
-    struct dirent* ent;
-    while ((ent = readdir(dir)) != nullptr)
+    struct dirent* dirEntry;
+    while ((dirEntry = readdir(dir.get())) != nullptr)
     {
-        // Ignore the . and ..
-        if ((ent->d_namlen == 1 && ent->d_name[0] == '.') ||
-            (ent->d_namlen == 2 && !strcmp(ent->d_name, "..")))
+#if CS2CPP_PLATFORM_DARWIN
+        std::string_view fileName(dirEntry->d_name, dirEntry->d_namlen);
+#else
+        std::string_view fileName(dirEntry->d_name);
+#endif
+        if (IsDotDirectory(fileName))
         {
             continue;
         }
 
-        auto fullPath = PosixPath::Combine(path, {ent->d_name, ent->d_namlen});
-        if (ent->d_type & DT_DIR)
+        std::string fullPath = GetFullPath(path, fileName);
+        if (dirEntry->d_type & DT_DIR)
         {
             InternalRecursiveDelete(fullPath);
         }
@@ -41,16 +77,13 @@ bool InternalRecursiveDelete(std::string_view path)
             unlink(reinterpret_cast<const char*>(fullPath.data()));
         }
     }
-    closedir(dir);
 
     return rmdir(reinterpret_cast<const char*>(path.data())) == 0;
 }
 
-}
-
 bool Directory::Exists(std::u16string_view path)
 {
-    auto s = CreateStat(path);
+    std::optional<struct stat> s = CreateStat(path);
     return s && S_ISDIR(s->st_mode);
 }
 

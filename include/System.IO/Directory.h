@@ -5,6 +5,7 @@
 
 #include "System/DateTime.h"
 #include "System.IO/DirectoryInfo.h"
+#include "System.IO.Enumeration/DirectoryIterator.h"
 
 CS2CPP_NAMESPACE_BEGIN
 
@@ -38,81 +39,18 @@ public:
     static std::vector<std::u16string> GetDirectories(std::u16string_view path, std::u16string_view searchPattern = u"*", SearchOption searchOption = SearchOption::TopDirectoryOnly);
     static std::vector<std::u16string> GetFiles(std::u16string_view path, std::u16string_view searchPattern = u"*", SearchOption searchOption = SearchOption::TopDirectoryOnly);
     static std::vector<std::u16string> GetFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern = u"*", SearchOption searchOption = SearchOption::TopDirectoryOnly);
-    template <typename F>
-    static void EnumerateDirectories(std::u16string_view path, const F& callback);
-    template <typename F>
-    static void EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, const F& callback);
-    template <typename F>
-    static void EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback);
-    template <typename F>
-    static void EnumerateFiles(std::u16string_view path, const F& callback);
-    template <typename F>
-    static void EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, const F& callback);
-    template <typename F>
-    static void EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback);
-    template <typename F>
-    static void EnumerateFileSystemEntries(std::u16string_view path, const F& callback);
-    template <typename F>
-    static void EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, const F& callback);
-    template <typename F>
-    static void EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback);
+    static DirectoryIterator EnumerateDirectories(std::u16string_view path);
+    static DirectoryIterator EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern);
+    static DirectoryIterator EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption);
+    static DirectoryIterator EnumerateFiles(std::u16string_view path);
+    static DirectoryIterator EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern);
+    static DirectoryIterator EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption);
+    static DirectoryIterator EnumerateFileSystemEntries(std::u16string_view path);
+    static DirectoryIterator EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern);
+    static DirectoryIterator EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption);
 
 private:
     static bool InternalCreateDirectory(std::u16string_view path);
 };
-
-template <typename F>
-void Directory::EnumerateDirectories(std::u16string_view path, const F& callback)
-{
-    return FileSystemEnumerable::EnumerateDirectories(path, callback);
-}
-
-template <typename F>
-void Directory::EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, const F& callback)
-{
-    return FileSystemEnumerable::EnumerateDirectories(path, searchPattern, callback);
-}
-
-template <typename F>
-void Directory::EnumerateDirectories(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback)
-{
-    return FileSystemEnumerable::EnumerateDirectories(path, searchPattern, searchOption, callback);
-}
-
-template <typename F>
-void Directory::EnumerateFiles(std::u16string_view path, const F& callback)
-{
-    return FileSystemEnumerable::EnumerateFiles(path, callback);
-}
-
-template <typename F>
-void Directory::EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, const F& callback)
-{
-    return FileSystemEnumerable::EnumerateFiles(path, searchPattern, callback);
-}
-
-template <typename F>
-void Directory::EnumerateFiles(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback)
-{
-    return FileSystemEnumerable::EnumerateFiles(path, searchPattern, searchOption, callback);
-}
-
-template <typename F>
-void Directory::EnumerateFileSystemEntries(std::u16string_view path, const F& callback)
-{
-    return FileSystemEnumerable::EnumerateFileSystemEntries(path, callback);
-}
-
-template <typename F>
-void Directory::EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, const F& callback)
-{
-    return FileSystemEnumerable::EnumerateFileSystemEntries(path, searchPattern, callback);
-}
-
-template <typename F>
-void Directory::EnumerateFileSystemEntries(std::u16string_view path, std::u16string_view searchPattern, SearchOption searchOption, const F& callback)
-{
-    return FileSystemEnumerable::EnumerateFileSystemEntries(path, searchPattern, searchOption, callback);
-}
 
 CS2CPP_NAMESPACE_END

@@ -31,11 +31,11 @@ public:
     static constexpr ReadOnlySpan<char16_t> GetInvalidFileNameChars() noexcept;
     static constexpr ReadOnlySpan<char16_t> GetInvalidPathChars() noexcept;
     static constexpr bool IsDirectorySeparator(char16_t c) noexcept;
+    static constexpr bool IsVolumeSeparator(char16_t c) noexcept;
 
 private:
     static void InternalCombine(std::u16string_view path, std::u16string& dest);
     static constexpr int32_t GetRootLength(std::u16string_view path) noexcept;
-    static constexpr bool IsVolumeSeparator(char16_t c) noexcept;
     static constexpr bool IsValidDriveChar(char16_t c) noexcept;
     static std::u16string RemoveRelativeSegments(std::u16string_view path);
 
@@ -59,6 +59,8 @@ template <typename... Ts>
 inline std::u16string Path::Combine(Ts&&... paths)
 {
     std::u16string ret;
+    ret.reserve((std::u16string_view(paths).length() + ...) + sizeof...(paths));
+
     (InternalCombine(std::forward<Ts>(paths), ret), ...);
 
     return ret;
@@ -78,7 +80,7 @@ constexpr std::u16string_view Path::GetExtension(std::u16string_view path) noexc
 
 constexpr std::u16string_view Path::GetFileName(std::u16string_view path) noexcept
 {
-    auto index = path.length();
+    size_t index = path.length();
     while (index-- > 0)
     {
         if (IsDirectorySeparator(path[index]) || IsVolumeSeparator(path[index]))
@@ -92,10 +94,9 @@ constexpr std::u16string_view Path::GetFileName(std::u16string_view path) noexce
 
 constexpr std::u16string_view Path::GetFileNameWithoutExtension(std::u16string_view path) noexcept
 {
-    path = GetFileName(path);
-    
-    size_t dot = path.rfind(u'.');
-    return (dot == std::string::npos) ? path : path.substr(0, dot);
+    std::u16string_view fileName = GetFileName(path);
+    size_t dot = fileName.rfind(u'.');
+    return (dot == std::string::npos) ? fileName : fileName.substr(0, dot);
 }
 
 constexpr bool Path::HasExtension(std::u16string_view path) noexcept
@@ -109,7 +110,7 @@ constexpr bool Path::IsDirectorySeparator(char16_t c) noexcept
     return c == AltDirectorySeparatorChar || c == DirectorySeparatorChar;
 }
 
-inline constexpr bool Path::IsVolumeSeparator(char16_t c) noexcept
+constexpr bool Path::IsVolumeSeparator(char16_t c) noexcept
 {
     return c == VolumeSeparatorChar;
 }

@@ -10,7 +10,7 @@ CS2CPP_NAMESPACE_BEGIN
 
 class TimeZoneInfo final
 {
-private:
+public:
     explicit TimeZoneInfo(icu::TimeZone* timeZone) noexcept;
 
 public:
