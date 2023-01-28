@@ -29,8 +29,8 @@ jobs:
       with:
         path: |
           ${{ github.workspace }}/bin/vcpkg_installed
-          ${{ github.workspace }}/external/vcpkg
-        key: ${{ hashFiles('vcpkg.json') }}-${{ hashFiles('.git/modules/external/vcpkg/HEAD') }}-${{ matrix.os }}
+          ${{ github.workspace }}/vcpkg
+        key: ${{ hashFiles('vcpkg.json') }}-${{ hashFiles('.git/modules/vcpkg/HEAD') }}-${{ matrix.os }}
         
     - name: Configure CMake
       run: cmake -B bin -A ${{ matrix.platform }} -DCMAKE_BUILD_TYPE=${{ matrix.build }}
